@@ -1,6 +1,7 @@
 import pika
 import json
 import docker
+from google.cloud import storage
 from confluent_kafka import Producer, Consumer, KafkaError
 
 DEFAULT_HOST = 'localhost'
@@ -28,6 +29,7 @@ class Sisyphus(object):
 		self.setup_rabbit(config.get('rabbit', {}))
 		self.setup_docker(config.get('docker', {}))
 		self.setup_kafka(config.get('kafka', {}))
+		self.setup_storage(config.get('storage', {}))
 
 	def setup_rabbit(self, config):
 		rabbit = setup_rabbit(config)
@@ -65,6 +67,10 @@ class Sisyphus(object):
 				'group.id': 'sisyphus-' + str(id),
 				'default.topic.config': {
 					'auto.offset.reset': 'latest'}})
+
+	def setup_storage(self, config):
+		self.storage = storage.Client()
+		self.bucket = self.storage.get_bucket(config.get('bucket', 'sisyphus'))
 
 	def preinitialize(self):
 		pass
@@ -168,6 +174,14 @@ class Sisyphus(object):
 	def receive(self, topic, message):
 		self.print_message(topic, message, True)
 		
+	def upload(self, bucket, source, destination):
+		blob = bucket.blob(destination)
+		blob.upload_from_filename(source)
+
+	def download(self, bucket, source, destination):
+		blob = bucket.blob(source)
+		blob.download_to_filename(destination)
+
 	def perform(self, task):
 		print('perform task: {}'.format(task))
 
