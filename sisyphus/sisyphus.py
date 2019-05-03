@@ -228,10 +228,12 @@ class Sisyphus(object):
 			self.download(bucket, key, local_path)
 
 		local_outputs = {}
+		remote_outputs = {}
 		for remote, internal in task['outputs'].items():
 			bucket_name, key = self.parse_storage_key(remote)
 			local_path = self.setup_path('outputs', key)
 			local_outputs[local_path] = internal
+			remote_outputs[internal] = (bucket_name, key)
 
 			Path(local_path).touch()
 
@@ -246,10 +248,11 @@ class Sisyphus(object):
 				'bind': internal,
 				'mode': 'rw'}
 
-		self.docker.images.pull(task['container'])
+		self.docker.images.pull(task['image'])
 
 		for command in task['commands']:
-			print(command)
+			print('running command {}'.format(command['command']))
+
 			tokens = command['command']
 			if 'stdout' in command:
 				tokens += ['>', command['stdout']]
@@ -257,9 +260,14 @@ class Sisyphus(object):
 				tokens = ['sh', '-c', sub]
 
 			self.docker.containers.run(
-				task['container'],
+				task['image'],
 				tokens,
 				volumes=volumes)
+
+		for local, internal in local_outputs.items():
+			bucket_name, key = remote_outputs[internal]
+			bucket = self.storage.get_bucket(bucket_name)
+			self.upload(bucket, local, key)
 
 
 if __name__ == '__main__':

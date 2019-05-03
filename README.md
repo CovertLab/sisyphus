@@ -12,10 +12,10 @@ Sisyphus is a task execution system that focuses on decentralization, running co
 
 ## task documents
 
-Each task is represented by a task document. This document details the command that will be run, the container it will be run in, any inputs the command needs to run, and any outputs we want to record later. Here is an example document:
+Each task is represented by a task document. This document details the command that will be run, the image it will be run with, any inputs the command needs to run, and any outputs we want to record later. Here is an example document:
 
 ```js
-{"container": "alpine:latest",
+{"image": "alpine:latest",
  "inputs": {
    "sisyphus:data/clear": "/mnt/clear"},
  "outputs": {
@@ -29,7 +29,7 @@ Each task is represented by a task document. This document details the command t
 
 There are four keys:
 
-* `container` - what docker container to use for this command.
+* `image` - what docker image to use for this command.
 * `inputs` - map of `bucket:path` to `/internal/container/path`, for copying down files from the object store and knowing where to put them inside the container.
 * `outputs` - same as inputs, but opposite, so a map of object store paths `bucket:path` to the internal path where the command placed various files in the container that we want to retain.
 * `commands` - a list of commands, each one with a `command` key (an array of command tokens) and keys for `stdout`, `stdin` and `stderr` with local paths, if required.

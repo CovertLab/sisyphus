@@ -1,4 +1,4 @@
-{"container": "alpine:latest",
+{"image": "alpine:latest",
  "inputs": {
    "sisyphus:data/clear": "/mnt/clear"},
  "outputs": {
