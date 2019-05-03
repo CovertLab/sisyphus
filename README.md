@@ -38,4 +38,4 @@ Any running Sisyphus nodes will be listening on a rabbitmq channel and will cons
 
 ## running
 
-> python sisyphus/sisyphus.py
+    $ python sisyphus/sisyphus.py
