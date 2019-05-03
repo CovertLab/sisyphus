@@ -1,3 +1,4 @@
+import os
 import pika
 import json
 import docker
@@ -19,6 +20,13 @@ def setup_rabbit(config):
 		'connection': connection,
 		'channel': channel,
 		'queue': queue}
+
+def publish(rabbit, message):
+	rabbit['channel'].basic_publish(
+		exchange='',
+		routing_key=rabbit['queue'],
+		body=json.dumps(message),
+		properties=pika.BasicProperties(delivery_mode=2))
 
 class Sisyphus(object):
 	def __init__(self, id, config={}):
@@ -44,8 +52,8 @@ class Sisyphus(object):
 			try:
 				task = json.loads(body.decode('utf-8'))
 				this.perform(task)
-			except Exception:
-				print('probably not json: {}'.format(body))
+			except Exception as e:
+				print(e)
 
 			ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -70,7 +78,9 @@ class Sisyphus(object):
 
 	def setup_storage(self, config):
 		self.storage = storage.Client()
-		self.bucket = self.storage.get_bucket(config.get('bucket', 'sisyphus'))
+		self.bucket_name = config.get('bucket', 'sisyphus')
+		self.bucket = self.storage.get_bucket(self.bucket_name)
+		self.local_root = config.get('local_root', '/mnt/data/sisyphus')
 
 	def preinitialize(self):
 		pass
@@ -182,8 +192,36 @@ class Sisyphus(object):
 		blob = bucket.blob(source)
 		blob.download_to_filename(destination)
 
+	def parse_storage_key(self, key):
+		parts = key.split(':')
+		if len(parts) > 1:
+			return parts[0], ':'.join(parts[1:])
+		else:
+			return self.bucket_name, parts[0]
+
 	def perform(self, task):
 		print('perform task: {}'.format(task))
+
+		local_inputs = {}
+		for remote, internal in task['inputs'].iteritems():
+			bucket_name, key = self.parse_storage_key(remote)
+			bucket = self.storage.get_bucket(bucket_name)
+			local_path = os.path.join(self.local_root, 'inputs', key)
+			self.download(bucket, key, local_path)
+			local_inputs[local_path] = internal
+
+		local_outputs = {}
+		for remote, internal in task['outputs'].iteritems():
+			bucket_name, key = self.parse_storage_key(remote)
+			local_path = os.path.join(self.local_root, 'outputs', key)
+			local_outputs[local_path] = internal
+
+		self.docker.images.pull(task['container'])
+
+		for command in task['commands']:
+			print(command)
+
+		
 
 if __name__ == '__main__':
 	sisyphus = Sisyphus(1)
