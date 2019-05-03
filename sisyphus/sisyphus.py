@@ -221,7 +221,7 @@ class Sisyphus(object):
 		for command in task['commands']:
 			print(command)
 
-		
+
 
 if __name__ == '__main__':
 	sisyphus = Sisyphus(1)

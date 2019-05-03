@@ -1,15 +1,18 @@
 # sisyphus
 
+![SISYPHUS](https://github.com/CovertLab/sisyphus/blob/master/public/sisyphus.png)
+
 "Forever, I shall be a stranger to myself."
-― Albert Camus, The Myth of Sisyphus
+
+― Albert Camus
 
 ## concept
 
-Sisyphus is a task execution system that focuses on decentralization (there is no leader so you can add new nodes to help out with load on the fly), running commands in specified docker containers and pulling and pushing inputs and outputs to and from a data store.
+Sisyphus is a task execution system that focuses on decentralization, running commands in containers, and pulling and pushing inputs and outputs to and from a data store. There is no leader so you can add new nodes on the fly to help out with load, and scale them back down again when you are done.
 
 ## task documents
 
-Each task is represented by a task document. This document details the container, command, inputs and outputs the task will field. Here is an example document:
+Each task is represented by a task document. This document details the command that will be run, the container it will be run in, any inputs the command needs to run, and any outputs we want to record later. Here is an example document:
 
 ```js
 {"container": "alpine:latest",
@@ -24,9 +27,15 @@ Each task is represented by a task document. This document details the container
    "stdout": "/mnt/crypt"}]}
 ```
 
-As you can see, there are four keys:
+There are four keys:
 
 * `container` - what docker container to use for this command.
 * `inputs` - map of `bucket:path` to `/internal/container/path`, for copying down files from the object store and knowing where to put them inside the container.
 * `outputs` - same as inputs, but opposite, so a map of object store paths `bucket:path` to the internal path where the command placed various files in the container that we want to retain.
-* `commands` - a list of commands, each one with a `command` key (an array of command tokens) and keys for `stdout`, `stdin` and `stderr` with local paths, if required. 
+* `commands` - a list of commands, each one with a `command` key (an array of command tokens) and keys for `stdout`, `stdin` and `stderr` with local paths, if required.
+
+Any running Sisyphus nodes will be listening on a rabbitmq channel and will consume any available task message when they are ready to execute something.
+
+## running
+
+> python sisyphus/sisyphus.py
