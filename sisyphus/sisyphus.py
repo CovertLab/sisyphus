@@ -1,12 +1,22 @@
 import os
+import sys
 import pika
 import json
 import docker
+import traceback
+from pathlib import Path
 from google.cloud import storage
 from confluent_kafka import Producer, Consumer, KafkaError
 
 DEFAULT_HOST = 'localhost'
 DEFAULT_QUEUE = 'tasks'
+DEFAULT_ROOT = '/tmp/sisyphus'
+
+def print_exception():
+	typ, value, trace = sys.exc_info()
+	print(typ)
+	print(value)
+	traceback.print_tb(trace)
 
 def setup_rabbit(config):
 	parameters = pika.ConnectionParameters(host=config.get('host', DEFAULT_HOST))
@@ -52,8 +62,8 @@ class Sisyphus(object):
 			try:
 				task = json.loads(body.decode('utf-8'))
 				this.perform(task)
-			except Exception as e:
-				print(e)
+			except Exception:
+				print_exception()
 
 			ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -80,7 +90,7 @@ class Sisyphus(object):
 		self.storage = storage.Client()
 		self.bucket_name = config.get('bucket', 'sisyphus')
 		self.bucket = self.storage.get_bucket(self.bucket_name)
-		self.local_root = config.get('local_root', '/mnt/data/sisyphus')
+		self.local_root = config.get('local_root', DEFAULT_ROOT)
 
 	def preinitialize(self):
 		pass
@@ -199,28 +209,57 @@ class Sisyphus(object):
 		else:
 			return self.bucket_name, parts[0]
 
+	def setup_path(self, base, key):
+		local_path = os.path.join(self.local_root, base, key)
+		local_base, _ = os.path.split(local_path)
+		os.makedirs(local_base, exist_ok=True)
+		return local_path
+
 	def perform(self, task):
 		print('perform task: {}'.format(task))
 
 		local_inputs = {}
-		for remote, internal in task['inputs'].iteritems():
+		for remote, internal in task['inputs'].items():
 			bucket_name, key = self.parse_storage_key(remote)
 			bucket = self.storage.get_bucket(bucket_name)
-			local_path = os.path.join(self.local_root, 'inputs', key)
-			self.download(bucket, key, local_path)
+			local_path = self.setup_path('inputs', key)
 			local_inputs[local_path] = internal
 
+			self.download(bucket, key, local_path)
+
 		local_outputs = {}
-		for remote, internal in task['outputs'].iteritems():
+		for remote, internal in task['outputs'].items():
 			bucket_name, key = self.parse_storage_key(remote)
-			local_path = os.path.join(self.local_root, 'outputs', key)
+			local_path = self.setup_path('outputs', key)
 			local_outputs[local_path] = internal
+
+			Path(local_path).touch()
+
+		volumes = {}
+		for local, internal in local_inputs.items():
+			volumes[local] = {
+				'bind': internal,
+				'mode': 'ro'}
+
+		for local, internal in local_outputs.items():
+			volumes[local] = {
+				'bind': internal,
+				'mode': 'rw'}
 
 		self.docker.images.pull(task['container'])
 
 		for command in task['commands']:
 			print(command)
+			tokens = command['command']
+			if 'stdout' in command:
+				tokens += ['>', command['stdout']]
+				sub = ' '.join(tokens)
+				tokens = ['sh', '-c', sub]
 
+			self.docker.containers.run(
+				task['container'],
+				tokens,
+				volumes=volumes)
 
 
 if __name__ == '__main__':
