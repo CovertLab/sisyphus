@@ -12,6 +12,12 @@ DEFAULT_HOST = 'localhost'
 DEFAULT_QUEUE = 'tasks'
 DEFAULT_ROOT = '/tmp/sisyphus'
 
+def merge(dicts):
+	head = dicts[0].copy()
+	for tail in dicts[1:]:
+		head.update(tail)
+	return head
+
 def print_exception():
 	typ, value, trace = sys.exc_info()
 	print(typ)
@@ -282,3 +288,4 @@ if __name__ == '__main__':
 	sisyphus = Sisyphus(1)
 	print('sisyphus rises')
 	sisyphus.start()
+
