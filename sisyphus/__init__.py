@@ -1,1 +1,1 @@
-from .sisyphus import Sisyphus, setup_rabbit, publish
+from .sisyphus import Sisyphus, Emitter

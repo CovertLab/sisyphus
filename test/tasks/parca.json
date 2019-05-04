@@ -1,7 +1,7 @@
 {"image": "gcr.io/allen-discovery-center-mcovert/wcm-code:latest",
  "inputs": {},
  "outputs": {
-   "sisyphus:data/wcm/sim_data.cPickle": "/out/parca/kb/simData_Fit_1.cPickle"},
+   "sisyphus:data/wcm/sim_data.cPickle": "/wcEcoli/out/parca/kb/simData_Fit_1.cPickle"},
  "commands": [{
    "command": [
      "python",

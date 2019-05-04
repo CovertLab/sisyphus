@@ -231,7 +231,7 @@ class Sisyphus(object):
 			local_path = self.setup_path('inputs', key)
 			local_inputs[local_path] = internal
 
-			print('downloading {}:{} to {}'.format(bucket, key, local))
+			print('downloading {}:{} to {}'.format(bucket, key, local_path))
 			self.download(bucket, key, local_path)
 
 		local_outputs = {}
@@ -283,6 +283,17 @@ class Sisyphus(object):
 
 		print('task complete!')
 
+class Emitter(object):
+	def __init__(self, config):
+		self.rabbit = setup_rabbit(config.get('rabbit', {}))
+
+	def publish(self, message):
+		publish(self.rabbit, message)
+
+	def submit_task(self, task_path):
+		with open(task_path) as task_file:
+			task = json.load(task_file)
+		self.publish(task)
 
 if __name__ == '__main__':
 	sisyphus = Sisyphus(1)
