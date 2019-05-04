@@ -10,6 +10,10 @@
 
 Sisyphus is a task execution system that focuses on decentralization, running commands in containers, and pulling and pushing inputs and outputs to and from a data store. There is no leader so you can add new nodes on the fly to help out with load, and scale them back down again when you are done.
 
+## setup
+
+In order to use cloud storage and GCR you have to authorize with google. This means running `gcloud auth login` at some point with an account that is tied to google cloud, and you have to follow the directions [here](https://cloud.google.com/storage/docs/reference/libraries) for "setting up authentication" to access the cloud resources programmatically. 
+
 ## storage
 
 There are three distinct levels of paths that need to be distinguished:
