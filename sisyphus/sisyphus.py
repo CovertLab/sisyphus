@@ -7,6 +7,7 @@ import traceback
 from pathlib import Path
 from google.cloud import storage
 from confluent_kafka import Producer, Consumer, KafkaError
+# from kombu import Connection, Exchange, Queue, Consumer
 
 DEFAULT_HOST = 'localhost'
 DEFAULT_QUEUE = 'tasks'
@@ -50,7 +51,7 @@ class Sisyphus(object):
 		self.config = config
 		self.running = False
 
-		self.setup_rabbit(config.get('rabbit', {}))
+		# self.setup_rabbit(config.get('rabbit', {}))
 		self.setup_docker(config.get('docker', {}))
 		self.setup_kafka(config.get('kafka', {}))
 		self.setup_storage(config.get('storage', {}))
@@ -58,23 +59,24 @@ class Sisyphus(object):
 	def setup_rabbit(self, config):
 		rabbit = setup_rabbit(config)
 
-		self.rabbit_parameters = rabbit['parameters']
-		self.rabbit_connection = rabbit['connection']
-		self.rabbit = rabbit['channel']
-		self.rabbit_queue = rabbit['queue']
-
 		this = self
 		def rabbit_callback(ch, method, properties, body):
 			try:
 				task = json.loads(body.decode('utf-8'))
 				this.perform(task)
+				ch.basic_ack(delivery_tag=method.delivery_tag)
+				print('task acknowledged')
+
 			except Exception:
 				print_exception()
 
-			ch.basic_ack(delivery_tag=method.delivery_tag)
+		channel = rabbit['channel']
+		channel.basic_qos(prefetch_count=1)
+		channel.basic_consume(
+			queue=rabbit['queue'],
+			on_message_callback=rabbit_callback)
 
-		self.rabbit.basic_qos(prefetch_count=1)
-		self.rabbit.basic_consume(queue=self.rabbit_queue, on_message_callback=rabbit_callback)
+		return rabbit
 
 	def setup_docker(self, config):
 		self.docker = docker.from_env()
@@ -114,7 +116,28 @@ class Sisyphus(object):
 		else:
 			self.preinitialize()
 			self.initialized = True
-			self.rabbit.start_consuming()
+			self.rabbit_consume() # rabbit.start_consuming()
+
+	def rabbit_consume(self):
+		while True:
+			try:
+				self.rabbit = self.setup_rabbit(self.config.get('rabbit', {}))
+
+				try:
+					self.rabbit['channel'].start_consuming()
+				except KeyboardInterrupt:
+					self.rabbit['channel'].stop_consuming()
+
+				self.rabbit['connection'].close()
+				break
+
+			except pika.exceptions.ConnectionClosedByBroker:
+				break
+			except pika.exceptions.AMQPChannelError:
+				break
+			except pika.exceptions.AMQPConnectionError:
+				print('recovering pika connection....')
+				continue
 
 	def poll(self):
 		"""

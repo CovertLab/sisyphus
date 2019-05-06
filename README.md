@@ -59,3 +59,5 @@ Any running Sisyphus nodes will be listening on a rabbitmq channel and will cons
 To start a new Sisyphus node that is ready to accept new tasks:
 
     $ python sisyphus/sisyphus.py
+
+∞
