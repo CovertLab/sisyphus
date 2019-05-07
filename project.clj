@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [com.taoensso/timbre "4.8.0"]
+                 [cheshire "5.7.1"]
                  [com.novemberain/langohr "5.1.0"]
                  [com.google.cloud/google-cloud-storage "1.70.0"]
                  [com.spotify/docker-client "8.15.2"]
