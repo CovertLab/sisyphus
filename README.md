@@ -1,6 +1,6 @@
 # sisyphus
 
-![SISYPHUS](https://github.com/CovertLab/sisyphus/blob/master/public/sisyphus.png)
+![SISYPHUS](https://github.com/CovertLab/sisyphus/blob/master/resources/public/sisyphus.png)
 
 "Forever, I shall be a stranger to myself."
 
