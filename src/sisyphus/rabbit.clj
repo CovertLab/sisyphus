@@ -62,9 +62,10 @@
     (log/info "sisyphus rises")
     (let [rabbit (rabbit-connect! {})
           consumer (start-consumer! rabbit)
-          signal (Thread.
-                  (fn []
-                    (log/info "sisyphus sleeps....")
-                    (close! rabbit)))]
-      (.addShutdownHook (Runtime/getRuntime) signal)
+          signal (reify sun.misc.SignalHandler
+                   (handle [this signal]
+                     (println "sisyphus sleeps....")
+                     (close! rabbit)))]
+      (sun.misc.Signal/handle (sun.misc.Signal. "INT") signal)
+      (log/info "signal added")
       @(promise))))
