@@ -13,6 +13,7 @@
   [config]
   (let [connection (lcore/connect)
         channel (lchannel/open connection)
+        _ (lbasic/qos channel 1)
         queue-name (get config :queue "sisyphus")
         exchange (get config :exchange "")
         queue (lqueue/declare channel "sisyphus" {:exclusive false :durable true})
@@ -31,7 +32,8 @@
   [channel metadata ^bytes payload]
   (let [raw (String. payload "UTF-8")
         message (json/parse-string raw true)]
-    (log/info "message received:" message)))
+    (log/info "message received:" message)
+    (lbasic/ack channel (:delivery-tag metadata))))
 
 (defn start-consumer!
   [rabbit]
@@ -39,7 +41,7 @@
         queue-name (:queue-name rabbit)
         thread (Thread.
                 (fn []
-                  (lconsumers/subscribe channel queue-name handle-message {:auto-ack true})))]
+                  (lconsumers/subscribe channel queue-name handle-message)))]
     (.start thread)))
 
 (defn publish!
@@ -64,8 +66,7 @@
           consumer (start-consumer! rabbit)
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]
-                     (println "sisyphus sleeps....")
-                     (close! rabbit)))]
+                     (close! rabbit)
+                     (println "sisyphus sleeps....")))]
       (sun.misc.Signal/handle (sun.misc.Signal. "INT") signal)
-      (log/info "signal added")
       @(promise))))
