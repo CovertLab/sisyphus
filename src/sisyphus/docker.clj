@@ -2,4 +2,5 @@
   (:require
    [])
   (:import
-   []))
+   [com.spotify.docker.client
+    DefaultDockerClient]))
