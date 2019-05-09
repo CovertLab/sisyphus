@@ -61,7 +61,7 @@
 (defn -main
   [& args]
   (try
-    (log/info "sisyphus rises")
+    (println "sisyphus rises")
     (let [rabbit (rabbit-connect! {})
           consumer (start-consumer! rabbit)
           signal (reify sun.misc.SignalHandler
