@@ -47,6 +47,19 @@
   (when *error*
     (apply println x)))
 
+
+;; (defmacro define-var
+;;   [key]
+;;   `(def ^:dynamic (symbol (name ~key)) false))
+
+;; (defmacro define-levels
+;;   [levels]
+;;   `(do
+;;      ~@(mapv
+;;         (fn [level]
+;;           `(def ^:dynamic ~(symbol (name level)) false))
+;;         levels)))
+
 ;; (def log-levels
 ;;   [:*debug*
 ;;    :*trace*
