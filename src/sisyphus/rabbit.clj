@@ -36,12 +36,12 @@
     (lbasic/ack channel (:delivery-tag metadata))))
 
 (defn start-consumer!
-  [rabbit]
+  [rabbit handle]
   (let [channel (:channel rabbit)
         queue-name (:queue-name rabbit)
         thread (Thread.
                 (fn []
-                  (lconsumers/subscribe channel queue-name handle-message)))]
+                  (lconsumers/subscribe channel queue-name handle)))]
     (.start thread)))
 
 (defn publish!
@@ -63,7 +63,7 @@
   (try
     (println "sisyphus rises")
     (let [rabbit (rabbit-connect! {})
-          consumer (start-consumer! rabbit)
+          consumer (start-consumer! rabbit handle-message)
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]
                      (close! rabbit)

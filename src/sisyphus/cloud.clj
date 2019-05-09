@@ -2,16 +2,11 @@
   (:require
    [clojure.java.io :as io])
   (:import
-   [java.io
-    FileOutputStream
-    FileInputStream]
+   [java.io FileInputStream]
    [java.net URI]
    [java.nio.file Path Paths]
-   [java.nio.channels Channels]
-   [com.google.common.io ByteStreams]
    [com.google.cloud.storage
     Storage StorageOptions
-    Storage$BlobGetOption
     Storage$BlobWriteOption
     Bucket BucketInfo
     Blob BlobId BlobInfo]))
