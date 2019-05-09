@@ -2,9 +2,9 @@
  "inputs": {
    "sisyphus:data/clear": "/mnt/clear"},
  "outputs": {
-   "sisyphus:data/crypt": "/mnt/crypt"},
+   "sisyphus:data/later": "/mnt/later"},
  "commands": [{
    "command": [
      "md5sum",
      "/mnt/clear"],
-   "stdout": "/mnt/crypt"}]}
+   "stdout": "/mnt/later"}]}
