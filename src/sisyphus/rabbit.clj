@@ -28,13 +28,6 @@
      :channel channel
      :config config}))
 
-(defn handle-message
-  [channel metadata ^bytes payload]
-  (let [raw (String. payload "UTF-8")
-        message (json/parse-string raw true)]
-    (log/info "message received:" message)
-    (lbasic/ack channel (:delivery-tag metadata))))
-
 (defn start-consumer!
   [rabbit handle]
   (let [channel (:channel rabbit)
@@ -58,12 +51,19 @@
   (lcore/close (:channel rabbit))
   (lcore/close (:connection rabbit)))
 
+(defn default-handle-message
+  [channel metadata ^bytes payload]
+  (let [raw (String. payload "UTF-8")
+        message (json/parse-string raw true)]
+    (log/info "message received:" message)
+    (lbasic/ack channel (:delivery-tag metadata))))
+
 (defn -main
   [& args]
   (try
     (println "sisyphus rises")
     (let [rabbit (rabbit-connect! {})
-          consumer (start-consumer! rabbit handle-message)
+          consumer (start-consumer! rabbit default-handle-message)
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]
                      (close! rabbit)
