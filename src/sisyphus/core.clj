@@ -23,7 +23,8 @@
         storage (cloud/connect! (:storage config))
         rabbit (rabbit/connect! (:rabbit config))
         state {:docker docker :storage storage :rabbit rabbit :config config}]
-    (rabbit/start-consumer! rabbit (partial sisyphus-handle-message state))))
+    (rabbit/start-consumer! rabbit (partial sisyphus-handle-message state))
+    state))
 
 (defn -main
   [& args]
