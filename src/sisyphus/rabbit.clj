@@ -9,7 +9,7 @@
    [langohr.consumers :as lconsumers]
    [langohr.basic :as lbasic]))
 
-(defn rabbit-connect!
+(defn connect!
   [config]
   (let [connection (lcore/connect)
         channel (lchannel/open connection)
@@ -61,12 +61,12 @@
 (defn -main
   [& args]
   (try
-    (println "sisyphus rises")
-    (let [rabbit (rabbit-connect! {})
+    (println "rabbbbbbbbbbit")
+    (let [rabbit (connect! {})
           consumer (start-consumer! rabbit default-handle-message)
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]
                      (close! rabbit)
-                     (println "sisyphus sleeps....")))]
+                     (println "(disappears into hole)")))]
       (sun.misc.Signal/handle (sun.misc.Signal. "INT") signal)
       @(promise))))
