@@ -58,6 +58,15 @@ Any running Sisyphus nodes will be listening on a rabbitmq channel and will cons
 
 To start a new Sisyphus node that is ready to accept new tasks:
 
-    $ python sisyphus/sisyphus.py
+    $ lein run
+
+Once this is up, you can put tasks on the queue and the new node will accept them and begin executing. In a new terminal execute the following commands:
+
+    $ lein repl
+    > (def rabbit (rabbit/connect! {}))
+    > (def task (task/load-task "test/tasks/md5sum.json")
+    > (rabbit/publish! rabbit task)
+
+You will see the worker node pick up this task and begin executing.
 
 ∞
