@@ -1,5 +1,7 @@
 (ns sisyphus.log)
 
+;; This file is an experiment to create a minimal log level implementation. Not currently in use.
+
 (def ^:dynamic *debug* false)
 (def ^:dynamic *trace* false)
 (def ^:dynamic *info* false)
@@ -14,6 +16,7 @@
    [:error #'*error*]])
 
 (defn log-level
+  "Given a map of log level keys to vars and a level, return all level keys implied by this level."
   [levels level]
   (into {}
    (map

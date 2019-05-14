@@ -10,12 +10,14 @@
     HostConfig]))
 
 (defn connect!
+  "Connect to the docker service provided by (:uri config)."
   [config]
   (if-let [uri (:uri config)]
     (docker/connect uri)
     (docker/connect)))
 
 (defn port-mapping
+  "Create a mapping of local ports to ports internal to the docker container."
   [ports]
   (into
    {}
@@ -26,6 +28,7 @@
     ports)))
 
 (defn exposed-ports
+  "Find a list of exposed ports given by the provided port mapping."
   [ports]
   (set
    (map
@@ -33,6 +36,8 @@
     ports)))
 
 (defn mount-mapping
+  "Generate a formatted mapping string for the given mount points
+   between local and container paths."
   [mounts]
   (map
    (fn [[from to]]
@@ -40,6 +45,15 @@
    mounts))
 
 (defn build-config
+  "Given a config map for running a docker container, create and return the config
+   object required by the java docker client. Options for config are:
+     * :ports - a mapping of port numbers from outside to inside the container.
+     * :mounts - a mapping of paths from outside to inside the container
+     * :env - any environment variables that need to be set inside the container.
+     * :working-dir - the working dir for the execution inside the container.
+     * :user - user who will perform the commands inside the container.
+     * :image - what docker image to use to build the container.
+     * :command - the command to run inside the container."
   [config]
   (let [host-config (HostConfig/builder)
         container-config (ContainerConfig/builder)]
@@ -61,20 +75,25 @@
         (.build))))
 
 (defn pull!
+  "Pull the docker image given by the `image` argument."
   [docker image]
   (docker/pull docker image))
 
 (defn create!
+  "Create a docker container from the given options and return the container id."
   [docker options]
   (let [config (build-config options)
         create (.createContainer docker config)]
     (docker-utils/format-id (.id create))))
 
 (defn start!
+  "Start the docker container with the given id."
   [docker id]
   (.startContainer docker id))
 
-(defn run!
+(defn run-container!
+  "Run a container with the given options. If :detach is provided, detach the running container
+   from the main thread."
   [docker options]
   (let [id (create! docker options)]
     (start! docker id)
