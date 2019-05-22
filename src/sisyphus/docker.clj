@@ -60,7 +60,6 @@
      * :image - what docker image to use to build the container.
      * :command - the command to run inside the container."
   [config]
-  (println "building config" config)
   (let [host-config (HostConfig/builder)
         container-config (ContainerConfig/builder)]
     (when-let [ports (:ports config)]
