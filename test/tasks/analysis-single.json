@@ -1,0 +1,21 @@
+{"image": "gcr.io/allen-discovery-center-mcovert/wcm-code:latest",
+ "inputs": {
+   "sisyphus:data/wcm/test/sim_out.tar.gz": "/wcEcoli/sim_out.tar.gz"},
+ "outputs": {
+   "sisyphus:data/wcm/test/plot_out.tar.gz": "/wcEcoli/plot_out.tar.gz"},
+ "commands": [{
+   "command": [
+     "tar",
+     "-xzvf",
+     "sim_out.tar.gz",
+     "out/test"]}, {
+   "command": [
+     "python",
+     "-u",
+     "runscripts/manual/analysisSingle.py",
+     "test"]}, {
+   "command": [
+     "tar",
+     "-czvf",
+     "plot_out.tar.gz",
+     "out/test/wildtype_000000/000000/generation_000000/000000/plotOut"]}]}

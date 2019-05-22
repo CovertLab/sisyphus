@@ -96,7 +96,12 @@
    from the main thread."
   [docker options]
   (let [id (create! docker options)]
+    (println "docker container id:" id)
     (start! docker id)
+    (future
+      (let [logs (docker/logs docker id)]
+        (doseq [line logs]
+          (println line))))
     (if (:detach options)
       id
       (docker/wait-container docker id))))
