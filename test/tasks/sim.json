@@ -1,6 +1,6 @@
 {"image": "gcr.io/allen-discovery-center-mcovert/wcm-code:latest",
  "inputs": {
-   "sisyphus:data/wcm/sim_data.cPickle": "/wcEcoli/out/parca/kb/simData_Fit_1.cPickle"},
+   "sisyphus:data/wcm/sim_data.cPickle": "/wcEcoli/out/test/kb/simData_Fit_1.cPickle"},
  "outputs": {
    "sisyphus:data/wcm/test/sim_out.tar.gz": "/wcEcoli/sim_out.tar.gz"},
  "commands": [{

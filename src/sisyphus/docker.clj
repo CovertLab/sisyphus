@@ -86,7 +86,8 @@
 
 (def default-options
   {:image "alpine"
-   :command ["sh" "-c" "while :; do sleep 1; done"]})
+   ;; :command ["sh" "-c" "while :; do sleep 1; done"]
+   :command ["tail" "-f" "/dev/null"]})
 
 (defn create!
   "Create a docker container from the given options and return the container id."
@@ -128,9 +129,12 @@
               docker id
               (into-array String command)
               (exec-streams))
+        exec-id (.id exec)
         output (.execStart
-                docker (.id exec)
-                (into-array DockerClient$ExecStartParameter []))]
+                docker exec-id
+                (into-array DockerClient$ExecStartParameter []))
+        state (.execInspect docker exec-id)]
+    (println state)
     (logs-seq output)))
 
 (defn run-container!

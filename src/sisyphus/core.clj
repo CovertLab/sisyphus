@@ -14,9 +14,12 @@
   (let [raw (String. payload "UTF-8")
         task (json/parse-string raw true)]
     (println "performing task" task)
-    (task/perform-task! state task)
-    (langohr/ack channel (:delivery-tag metadata))
-    (println "task complete!")))
+    (try
+      (do
+        (task/perform-task! state task)
+        (langohr/ack channel (:delivery-tag metadata))
+        (println "task complete!"))
+      (catch Exception e (.printStackTrace e)))))
 
 (defn start
   "Start the system by making all the required connections and returning the state map."

@@ -90,12 +90,14 @@
         outputs (process-outputs! state (:outputs task))
         remote (remote-mapping (:outputs task))
         image (:image task)
+        _ (println "pulling docker image" image)
         _ (docker/pull! docker image)
         config {:image image
-                :mounts (merge inputs outputs)
-                :command ["sh" "-c" "while :; do sleep 1; done"]}
+                :mounts (merge inputs outputs)}
+        _ (println "creating docker container from" config)
         id (docker/create! docker config)]
 
+    (println "starting container" id)
     (docker/start! docker id)
 
     (doseq [command (:commands task)]
@@ -104,10 +106,11 @@
             tokens (if stdout
                      (redirect-stdout tokens stdout)
                      tokens)]
-        (println "running>" tokens)
+        (println "running command:" tokens)
         (doseq [line (docker/exec! docker id tokens)]
-          (println id ">" line))))
+          (println (str id ">") line))))
 
+    (println "stopping container" id)
     (docker/stop! docker id)
 
     (doseq [[local internal] outputs]
