@@ -8,6 +8,5 @@
                  [lispyclouds/clj-docker-client "0.2.3"]
                  [com.novemberain/langohr "5.1.0"]
                  [com.google.cloud/google-cloud-storage "1.70.0"]
-                 ;; [com.spotify/docker-client "8.15.2"]
                  [spootnik/kinsky "0.1.22"]]
   :main sisyphus.core)
