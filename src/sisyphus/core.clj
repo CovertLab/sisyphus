@@ -9,6 +9,7 @@
    [sisyphus.rabbit :as rabbit]))
 
 (defn sisyphus-handle-message
+  "Handle an incoming task message by performing the task it represents."
   [state channel metadata ^bytes payload]
   (let [raw (String. payload "UTF-8")
         task (json/parse-string raw true)]
@@ -18,9 +19,10 @@
     (println "task complete!")))
 
 (defn start
+  "Start the system by making all the required connections and returning the state map."
   [config]
   (let [docker (docker/connect! (:docker config))
-        storage (cloud/connect! (:storage config))
+        storage (cloud/connect-storage! (:storage config))
         rabbit (rabbit/connect! (:rabbit config))
         state {:docker docker :storage storage :rabbit rabbit :config config}]
     (rabbit/start-consumer! rabbit (partial sisyphus-handle-message state))

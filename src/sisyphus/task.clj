@@ -7,9 +7,15 @@
    [sisyphus.docker :as docker]))
 
 (def full-name
+  "Extract the string representation of the given keyword. This is an extension to the build-in
+   `name` function which fails to return the full string representation for namespaced keywords."
   (comp str symbol))
 
 (defn setup-path!
+  "Sets up a path from a storage key to be mounted into a docker container.
+     * remote - the storage key the local path will be based on.
+     * root - the root of the local filesystem where this path will reside.
+     * base - the type of path we are creating (appended to the path before the remote key)."
   [remote root base]
   (let [[bucket key] (string/split (full-name remote) #":")
         input (io/file root base key)
@@ -20,6 +26,9 @@
     [bucket key local]))
 
 (defn process-input!
+  "Given a remote key on the object store and a path internal to the container, create a mapping
+   between the local path where that file from the object store will reside after being
+   downloaded and the internal path inside the container, as read-only."
   [{:keys [config storage]} remote internal]
   (let [root (get-in config [:local :root])
         [bucket key local] (setup-path! remote root "inputs")]
@@ -27,12 +36,17 @@
     [local (str internal ":ro")]))
 
 (defn process-output!
+  "Given a remote key on the object store and a path internal to the container, create a mapping
+   between the local path where that file from the object store will reside after being
+   downloaded and the internal path inside the container, as read-write."
   [{:keys [config storage]} remote internal]
   (let [root (get-in config [:local :root])
         [bucket key local] (setup-path! remote root "outputs")]
     [local internal]))
 
 (defn process-local!
+  "Process inputs or outputs (depending on the value of the function `process!`) translating a
+   mapping of (remote keys --> internal container paths) to (local path --> internal)."
   [process! state mapping]
   (into
    {}
@@ -42,6 +56,8 @@
     mapping)))
 
 (defn remote-mapping
+  "Create a map of internal paths to a remote key in the object store [bucket key], to be used
+   to know where to upload newly created outputs."
   [outputs]
   (into
    {}
@@ -55,14 +71,19 @@
 (def process-outputs! (partial process-local! process-output!))
 
 (defn redirect-stdout
+  "Translate the tokens of a command into a command that redirects stdout to the given file `stdout`"
   [tokens stdout]
   ["sh" "-c" (string/join " " (concat tokens [">" stdout]))])
 
 (defn load-task
+  "Load a task specification from the given path."
   [path]
   (json/parse-string (slurp path) true))
 
 (defn perform-task!
+  "Given a state containing a connection to both cloud storage and some docker service, execute
+   the task specified by the given `task` map, downloading all inputs from cloud storage,
+   executing the command in the specified container, and then uploading all outputs back to storage."
   [{:keys [storage docker] :as state} task]
   (let [inputs (process-inputs! state (:inputs task))
         outputs (process-outputs! state (:outputs task))
@@ -79,7 +100,7 @@
                  :mounts (merge inputs outputs)
                  :command tokens}]
         (println "running" run)
-        (docker/run! docker run)))
+        (docker/run-container! docker run)))
     (doseq [[local internal] outputs]
       (let [[bucket key] (get remote internal)]
         (println "uploading" local "to" (str bucket ":" key))
