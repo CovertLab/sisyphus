@@ -81,26 +81,35 @@
   (json/parse-string (slurp path) true))
 
 (defn perform-task!
-  "Given a state containing a connection to both cloud storage and some docker service, execute
-   the task specified by the given `task` map, downloading all inputs from cloud storage,
-   executing the command in the specified container, and then uploading all outputs back to storage."
+  "Given a state containing a connection to both cloud storage and some docker service, 
+   execute the task specified by the given `task` map, downloading all inputs from cloud
+   storage, executing the command in the specified container, and then uploading all
+   outputs back to storage."
   [{:keys [storage docker] :as state} task]
   (let [inputs (process-inputs! state (:inputs task))
         outputs (process-outputs! state (:outputs task))
         remote (remote-mapping (:outputs task))
-        image (:image task)]
-    (docker/pull! docker image)
+        image (:image task)
+        _ (docker/pull! docker image)
+        config {:image image
+                :mounts (merge inputs outputs)
+                :command ["sh" "-c" "while :; do sleep 1; done"]}
+        id (docker/create! docker config)]
+
+    (docker/start! docker id)
+
     (doseq [command (:commands task)]
       (let [stdout (:stdout command)
             tokens (:command command)
             tokens (if stdout
                      (redirect-stdout tokens stdout)
-                     tokens)
-            run {:image image
-                 :mounts (merge inputs outputs)
-                 :command tokens}]
-        (println "running" run)
-        (docker/run-container! docker run)))
+                     tokens)]
+        (println "running>" tokens)
+        (doseq [line (docker/exec! docker id tokens)]
+          (println id ">" line))))
+
+    (docker/stop! docker id)
+
     (doseq [[local internal] outputs]
       (let [[bucket key] (get remote internal)]
         (println "uploading" local "to" (str bucket ":" key))

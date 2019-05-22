@@ -1,10 +1,15 @@
 (ns sisyphus.docker
   (:require
+   [clojure.java.io :as io]
+   [byte-streams :as bytes]
    [clj-docker-client.core :as docker]
    [clj-docker-client.utils :as docker-utils])
   (:import
    [com.spotify.docker.client
-    DefaultDockerClient]
+    LogMessage
+    DefaultDockerClient
+    DockerClient$ExecCreateParam
+    DockerClient$ExecStartParameter]
    [com.spotify.docker.client.messages
     ContainerConfig
     HostConfig]))
@@ -55,6 +60,7 @@
      * :image - what docker image to use to build the container.
      * :command - the command to run inside the container."
   [config]
+  (println "building config" config)
   (let [host-config (HostConfig/builder)
         container-config (ContainerConfig/builder)]
     (when-let [ports (:ports config)]
@@ -79,21 +85,58 @@
   [docker image]
   (docker/pull docker image))
 
+(def default-options
+  {:image "alpine"
+   :command ["sh" "-c" "while :; do sleep 1; done"]})
+
 (defn create!
   "Create a docker container from the given options and return the container id."
-  [docker options]
-  (let [config (build-config options)
-        create (.createContainer docker config)]
-    (docker-utils/format-id (.id create))))
+  ([docker] (create! docker {}))
+  ([docker options]
+   (let [config (build-config (merge default-options options))
+         create (.createContainer docker config)]
+     (docker-utils/format-id (.id create)))))
 
 (defn start!
   "Start the docker container with the given id."
   [docker id]
   (.startContainer docker id))
 
+(defn stop!
+  [docker id]
+  (docker/stop docker id))
+
+(defn logs-seq
+  "Convert a docker-client ^LogStream to a seq of lines."
+  [logs]
+  (let [it (iterator-seq logs)
+        content (map #(.content ^LogMessage %) it)
+        stream (bytes/to-input-stream content)
+        reader (io/reader stream)]
+    (line-seq reader)))
+
+(defn exec-streams
+  []
+  (into-array
+   DockerClient$ExecCreateParam
+   [(DockerClient$ExecCreateParam/attachStdout)
+    (DockerClient$ExecCreateParam/attachStderr)]))
+
+(defn exec!
+  "Execute the given command in a running container."
+  [docker id command]
+  (let [exec (.execCreate
+              docker id
+              (into-array String command)
+              (exec-streams))
+        output (.execStart
+                docker (.id exec)
+                (into-array DockerClient$ExecStartParameter []))]
+    (logs-seq output)))
+
 (defn run-container!
-  "Run a container with the given options. If :detach is provided, detach the running container
-   from the main thread."
+  "Run a container with the given options. If :detach is provided, detach the running
+   container from the main thread."
   [docker options]
   (let [id (create! docker options)]
     (println "docker container id:" id)
