@@ -80,6 +80,20 @@
   [path]
   (json/parse-string (slurp path) true))
 
+(defn join-commands
+  [commands]
+  (let [series
+        (for [command commands]
+          (let [stdout (:stdout command)
+                tokens (:command command)
+                passage (string/join
+                         " "
+                         (if stdout
+                           (concat tokens [">" stdout])
+                           tokens))]
+            passage))]
+    ["bash" "-c" (string/join " && " series)]))
+
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
    execute the task specified by the given `task` map, downloading all inputs from cloud
@@ -92,28 +106,59 @@
         image (:image task)
         _ (println "pulling docker image" image)
         _ (docker/pull! docker image)
+        commands (join-commands (:commands task))
         config {:image image
-                :mounts (merge inputs outputs)}
+                :mounts (merge inputs outputs)
+                :command commands}
         _ (println "creating docker container from" config)
         id (docker/create! docker config)]
 
     (println "starting container" id)
     (docker/start! docker id)
 
-    (doseq [command (:commands task)]
-      (let [stdout (:stdout command)
-            tokens (:command command)
-            tokens (if stdout
-                     (redirect-stdout tokens stdout)
-                     tokens)]
-        (println "running command:" tokens)
-        (doseq [line (docker/exec! docker id tokens)]
-          (println (str id ">") line))))
+    (println "executing container" id)
+    (docker/wait! docker id)
 
-    (println "stopping container" id)
-    (docker/stop! docker id)
-
+    (println "execution complete!" id)
     (doseq [[local internal] outputs]
       (let [[bucket key] (get remote internal)]
         (println "uploading" local "to" (str bucket ":" key))
         (cloud/upload! storage bucket key local {})))))
+
+;; (defn perform-task!
+;;   "Given a state containing a connection to both cloud storage and some docker service, 
+;;    execute the task specified by the given `task` map, downloading all inputs from cloud
+;;    storage, executing the command in the specified container, and then uploading all
+;;    outputs back to storage."
+;;   [{:keys [storage docker] :as state} task]
+;;   (let [inputs (process-inputs! state (:inputs task))
+;;         outputs (process-outputs! state (:outputs task))
+;;         remote (remote-mapping (:outputs task))
+;;         image (:image task)
+;;         _ (println "pulling docker image" image)
+;;         _ (docker/pull! docker image)
+;;         config {:image image
+;;                 :mounts (merge inputs outputs)}
+;;         _ (println "creating docker container from" config)
+;;         id (docker/create! docker config)]
+
+;;     (println "starting container" id)
+;;     (docker/start! docker id)
+
+;;     (doseq [command (:commands task)]
+;;       (let [stdout (:stdout command)
+;;             tokens (:command command)
+;;             tokens (if stdout
+;;                      (redirect-stdout tokens stdout)
+;;                      tokens)]
+;;         (println "running command:" tokens)
+;;         (doseq [line (docker/exec! docker id tokens)]
+;;           (println (str id ">") line))))
+
+;;     (println "stopping container" id)
+;;     (docker/stop! docker id)
+
+;;     (doseq [[local internal] outputs]
+;;       (let [[bucket key] (get remote internal)]
+;;         (println "uploading" local "to" (str bucket ":" key))
+;;         (cloud/upload! storage bucket key local {})))))

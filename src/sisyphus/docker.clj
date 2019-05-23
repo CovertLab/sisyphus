@@ -151,3 +151,11 @@
     (if (:detach options)
       id
       (docker/wait-container docker id))))
+
+(defn wait!
+  [docker id]
+  (future
+    (let [logs (docker/logs docker id)]
+      (doseq [line logs]
+        (println line))))
+  (docker/wait-container docker id))
