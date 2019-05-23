@@ -3,6 +3,7 @@
    [clojure.string :as string]
    [clojure.java.io :as io]
    [cheshire.core :as json]
+   [sisyphus.archive :as archive]
    [sisyphus.cloud :as cloud]
    [sisyphus.docker :as docker]))
 
@@ -11,19 +12,36 @@
    `name` function which fails to return the full string representation for namespaced keywords."
   (comp str symbol))
 
+(defn directory-path?
+  [path]
+  (= (last path) \/))
+
 (defn setup-path!
   "Sets up a path from a storage key to be mounted into a docker container.
      * remote - the storage key the local path will be based on.
      * root - the root of the local filesystem where this path will reside.
-     * base - the type of path we are creating (appended to the path before the remote key)."
-  [remote root base]
+     * kind - the type of path we are creating (appended to the path before the remote key)."
+  [remote root kind]
   (let [[bucket key] (string/split (full-name remote) #":")
-        input (io/file root base key)
+        input (io/file root kind key)
         local (.getAbsolutePath input)
         base (io/file (.getParent input))]
     (.mkdirs base)
     (.createNewFile input)
     [bucket key local]))
+
+(defn input-directory!
+  [{:keys [config storage]} remote internal]
+  (let [root (get-in config [:local :root])
+        [bucket key] (string/split (full-name remote) #":")
+        input (io/file root "inputs" key)
+        local (.getAbsolutePath input)
+        archive (str local ".tar.gz")
+        base (io/file (.getParent input))]
+    (.mkdirs local)
+    (cloud/download! storage bucket key archive)
+    (archive/unpack-archive archive local)
+    [local internal]))
 
 (defn process-input!
   "Given a remote key on the object store and a path internal to the container, create a mapping

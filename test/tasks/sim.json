@@ -1,16 +1,12 @@
 {"image": "gcr.io/allen-discovery-center-mcovert/wcm-code:latest",
  "inputs": {
-   "sisyphus:data/wcm/sim_data.cPickle": "/wcEcoli/out/test/kb/simData.cPickle"},
+   "sisyphus:data/wcm/test/parca-out": "/wcEcoli/out/sim/kb/"},
  "outputs": {
-   "sisyphus:data/wcm/test/sim_out.tar.gz": "/wcEcoli/sim_out.tar.gz"},
+   "sisyphus:data/wcm/test/metadata": "/wcEcoli/out/sim/metadata/",
+   "sisyphus:data/wcm/test/sim-out": "/wcEcoli/out/sim/wildtype_000000/"},
  "commands": [{
    "command": [
      "python",
      "-u",
      "runscripts/manual/runSim.py",
-     "test"]}, {
-   "command": [
-     "tar",
-     "-czvf",
-     "sim_out.tar.gz",
-     "out/test"]}]}
+     "sim"]}]}
