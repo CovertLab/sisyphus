@@ -8,6 +8,8 @@
    [com.spotify.docker.client
     LogMessage
     DefaultDockerClient
+    DockerClient$LogsParam
+    DockerClient$AttachParameter
     DockerClient$ExecCreateParam
     DockerClient$ExecStartParameter]
    [com.spotify.docker.client.messages
@@ -109,6 +111,33 @@
   [docker id]
   (docker/logs docker id))
 
+(defn logs-streams
+  []
+  (into-array
+   DockerClient$LogsParam
+   [(DockerClient$LogsParam/stdout)
+    (DockerClient$LogsParam/stderr)]))
+
+(defn read-fully!
+  [docker id]
+  (let [stream (.logs docker id (logs-streams))]
+    (.readFully stream)))
+
+(defn attach-params
+  []
+  (into-array
+   DockerClient$AttachParameter
+   [DockerClient$AttachParameter/LOGS
+    DockerClient$AttachParameter/STDOUT
+    DockerClient$AttachParameter/STDERR
+    DockerClient$AttachParameter/STREAM]))
+
+(defn attach-logs
+  ([docker id] (attach-logs docker id System/out System/err))
+  ([docker id out err]
+   (let [attach (.attachContainer docker id (attach-params))]
+     (.attach attach out err))))
+
 (defn logs-seq
   "Convert a docker-client ^LogStream to a seq of lines."
   [logs]
@@ -157,8 +186,5 @@
 
 (defn wait!
   [docker id]
-  (future
-    (let [logs (docker/logs docker id)]
-      (doseq [line logs]
-        (println line))))
+  (attach-logs docker id)
   (docker/wait-container docker id))
