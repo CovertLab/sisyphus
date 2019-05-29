@@ -1,5 +1,6 @@
 (ns sisyphus.core
   (:require
+   [clojure.string :as string]
    [cheshire.core :as json]
    [taoensso.timbre :as log]
    [langohr.basic :as langohr]

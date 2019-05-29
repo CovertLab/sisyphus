@@ -8,13 +8,10 @@
    [sisyphus.docker :as docker]))
 
 (def full-name
-  "Extract the string representation of the given keyword. This is an extension to the build-in
-   `name` function which fails to return the full string representation for namespaced keywords."
+  "Extract the string representation of the given keyword. This is an extension to the
+   built-in `name` function which fails to return the full string representation for
+   namespaced keywords."
   (comp str symbol))
-
-(defn directory-path?
-  [path]
-  (= (last path) \/))
 
 (defn setup-path!
   "Sets up a path from a storage key to be mounted into a docker container.
@@ -30,23 +27,42 @@
     (.createNewFile input)
     [bucket key local]))
 
-(defn input-directory!
-  [{:keys [config storage]} remote internal]
-  (let [root (get-in config [:local :root])
-        [bucket key] (string/split (full-name remote) #":")
-        input (io/file root "inputs" key)
+(defn split-key
+  [key]
+  (let [[prefix & parts] (string/split (full-name key) #":")]
+    [prefix (string/join ":" parts)]))
+
+(defn find-local
+  [root remote internal]
+  (let [[bucket key] (split-key remote)
+        input (io/file root key)
         local (.getAbsolutePath input)
         archive (str local ".tar.gz")
-        base (io/file (.getParent input))]
-    (.mkdirs local)
-    (cloud/download! storage bucket key archive)
-    (archive/unpack-archive archive local)
-    [local internal]))
+        directory? (archive/directory-path? internal)]
+    {:remote remote
+     :bucket bucket
+     :key key
+     :archive archive
+     :root root
+     :local local
+     :input input
+     :directory? directory?
+     :internal internal}))
+
+(defn pull-input!
+  [storage {:keys [bucket key archive local]}]
+  (cloud/download! storage bucket key archive)
+  (archive/unpack! archive local))
+
+(defn push-output!
+  [storage {:keys [local archive bucket key]}]
+  (archive/pack! local archive)
+  (cloud/upload! storage bucket key archive))
 
 (defn process-input!
-  "Given a remote key on the object store and a path internal to the container, create a mapping
-   between the local path where that file from the object store will reside after being
-   downloaded and the internal path inside the container, as read-only."
+  "Given a remote key on the object store and a path internal to the container, create
+   a mapping between the local path where that file from the object store will reside
+   after being downloaded and the internal path inside the container, as read-only."
   [{:keys [config storage]} remote internal]
   (let [root (get-in config [:local :root])
         [bucket key local] (setup-path! remote root "inputs")]
@@ -54,17 +70,18 @@
     [local (str internal ":ro")]))
 
 (defn process-output!
-  "Given a remote key on the object store and a path internal to the container, create a mapping
-   between the local path where that file from the object store will reside after being
-   downloaded and the internal path inside the container, as read-write."
+  "Given a remote key on the object store and a path internal to the container, create
+   a mapping between the local path where that file from the object store will reside
+   after being downloaded and the internal path inside the container, as read-write."
   [{:keys [config storage]} remote internal]
   (let [root (get-in config [:local :root])
         [bucket key local] (setup-path! remote root "outputs")]
     [local internal]))
 
 (defn process-local!
-  "Process inputs or outputs (depending on the value of the function `process!`) translating a
-   mapping of (remote keys --> internal container paths) to (local path --> internal)."
+  "Process inputs or outputs (depending on the value of the function `process!`)
+   translating a mapping of (remote keys --> internal container paths) to
+   (local path --> internal)."
   [process! state mapping]
   (into
    {}
@@ -74,8 +91,8 @@
     mapping)))
 
 (defn remote-mapping
-  "Create a map of internal paths to a remote key in the object store [bucket key], to be used
-   to know where to upload newly created outputs."
+  "Create a map of internal paths to a remote key in the object store [bucket key],
+   to be used to know where to upload newly created outputs."
   [outputs]
   (into
    {}

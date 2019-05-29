@@ -16,10 +16,10 @@
     storage))
 
 (defn get-path
-  "Get the java.nio.file.Path object corresponding to the provided absolute filesystem path."
+  "Get the java.nio.file.Path object corresponding to the provided absolute
+   filesystem path."
   [path]
   (.toPath (File. path)))
-  ;; (Paths/get (URI. (str "file://" path)))
 
 (defn upload!
   "Upload the file at the given local filesystem path to the cloud storage bucket and key."
