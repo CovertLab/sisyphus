@@ -1,9 +1,9 @@
 {"image": "gcr.io/allen-discovery-center-mcovert/wcm-code:latest",
  "inputs": {
-   "sisyphus:data/wcm/test/metadata": "/wcEcoli/out/analysis/metadata/",
-   "sisyphus:data/wcm/test/sim-out": "/wcEcoli/out/analysis/wildtype_000000/"},
+   "sisyphus:data/wcm/over/metadata": "/wcEcoli/out/analysis/metadata/",
+   "sisyphus:data/wcm/over/sim-out": "/wcEcoli/out/analysis/wildtype_000000/"},
  "outputs": {
-   "sisyphus:data/wcm/test/plot-out": "/wcEcoli/out/analysis/wildtype_000000/000000/generation_000000/000000/plotOut/"},
+   "sisyphus:data/wcm/over/plot-out": "/wcEcoli/out/analysis/wildtype_000000/000000/generation_000000/000000/plotOut/"},
  "commands": [{
    "command": [
      "python",

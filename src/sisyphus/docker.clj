@@ -86,7 +86,6 @@
 
 (def default-options
   {:image "alpine"
-   ;; :command ["sh" "-c" "while :; do sleep 1; done"]
    :command ["tail" "-f" "/dev/null"]})
 
 (defn create!
@@ -105,6 +104,10 @@
 (defn stop!
   [docker id]
   (docker/stop docker id))
+
+(defn logs
+  [docker id]
+  (docker/logs docker id))
 
 (defn logs-seq
   "Convert a docker-client ^LogStream to a seq of lines."
