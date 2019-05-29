@@ -112,10 +112,7 @@
       (println "downloading" input)
       (pull-input! storage input))
 
-    (let [mounts (merge
-                  (mount-map inputs :local :internal)
-                  (mount-map outputs :local :internal))
-
+    (let [mounts (mount-map (concat inputs outputs) :local :internal)
           config {:image image
                   :mounts mounts
                   :command commands}
