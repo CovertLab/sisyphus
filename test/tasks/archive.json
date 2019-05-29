@@ -1,0 +1,9 @@
+{"image": "gcr.io/allen-discovery-center-mcovert/wcm-code:latest",
+ "inputs": {},
+ "outputs": {
+   "sisyphus:data/test/agent": "/tmp/agent/"},
+ "commands": [{
+   "command": [
+     "mv",
+     "agent",
+     "tmp"]}]}

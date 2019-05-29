@@ -13,32 +13,24 @@
    namespaced keywords."
   (comp str symbol))
 
-(defn setup-path!
-  "Sets up a path from a storage key to be mounted into a docker container.
-     * remote - the storage key the local path will be based on.
-     * root - the root of the local filesystem where this path will reside.
-     * kind - the type of path we are creating (appended to the path before the remote key)."
-  [remote root kind]
-  (let [[bucket key] (string/split (full-name remote) #":")
-        input (io/file root kind key)
-        local (.getAbsolutePath input)
-        base (io/file (.getParent input))]
-    (.mkdirs base)
-    (.createNewFile input)
-    [bucket key local]))
-
 (defn split-key
   [key]
   (let [[prefix & parts] (string/split (full-name key) #":")]
     [prefix (string/join ":" parts)]))
 
 (defn find-local
-  [root remote internal]
+  [root [remote internal]]
   (let [[bucket key] (split-key remote)
         input (io/file root key)
         local (.getAbsolutePath input)
         archive (str local ".tar.gz")
-        directory? (archive/directory-path? internal)]
+        directory? (archive/directory-path? internal)
+        intern (archive/trim-slash internal)]
+    (if directory?
+      (.mkdirs input)
+      (let [base (io/file (.getParent input))]
+        (.mkdirs base)
+        (.createNewFile input)))
     {:remote remote
      :bucket bucket
      :key key
@@ -47,63 +39,27 @@
      :local local
      :input input
      :directory? directory?
-     :internal internal}))
+     :internal intern}))
+
+(defn find-locals
+  [root locals]
+  (mapv (partial find-local root) locals))
 
 (defn pull-input!
-  [storage {:keys [bucket key archive local]}]
-  (cloud/download! storage bucket key archive)
-  (archive/unpack! archive local))
+  [storage {:keys [bucket key archive local directory? internal]}]
+  (if directory?
+    (do
+      (cloud/download! storage bucket key archive)
+      (archive/unpack! archive local))
+    (cloud/download! storage bucket key local)))
 
 (defn push-output!
-  [storage {:keys [local archive bucket key]}]
-  (archive/pack! local archive)
-  (cloud/upload! storage bucket key archive))
-
-(defn process-input!
-  "Given a remote key on the object store and a path internal to the container, create
-   a mapping between the local path where that file from the object store will reside
-   after being downloaded and the internal path inside the container, as read-only."
-  [{:keys [config storage]} remote internal]
-  (let [root (get-in config [:local :root])
-        [bucket key local] (setup-path! remote root "inputs")]
-    (cloud/download! storage bucket key local)
-    [local (str internal ":ro")]))
-
-(defn process-output!
-  "Given a remote key on the object store and a path internal to the container, create
-   a mapping between the local path where that file from the object store will reside
-   after being downloaded and the internal path inside the container, as read-write."
-  [{:keys [config storage]} remote internal]
-  (let [root (get-in config [:local :root])
-        [bucket key local] (setup-path! remote root "outputs")]
-    [local internal]))
-
-(defn process-local!
-  "Process inputs or outputs (depending on the value of the function `process!`)
-   translating a mapping of (remote keys --> internal container paths) to
-   (local path --> internal)."
-  [process! state mapping]
-  (into
-   {}
-   (map
-    (fn [[local internal]]
-      (process! state local internal))
-    mapping)))
-
-(defn remote-mapping
-  "Create a map of internal paths to a remote key in the object store [bucket key],
-   to be used to know where to upload newly created outputs."
-  [outputs]
-  (into
-   {}
-   (map
-    (fn [[remote internal]]
-      (let [[bucket key] (string/split (full-name remote) #":")]
-        [internal [bucket key]]))
-    outputs)))
-
-(def process-inputs! (partial process-local! process-input!))
-(def process-outputs! (partial process-local! process-output!))
+  [storage {:keys [local directory? archive bucket key]}]
+  (if directory?
+    (do
+      (archive/pack! archive local)
+      (cloud/upload! storage bucket key archive))
+    (cloud/upload! storage bucket key local)))
 
 (defn redirect-stdout
   "Translate the tokens of a command into a command that redirects stdout to the given file `stdout`"
@@ -129,36 +85,58 @@
             passage))]
     ["bash" "-c" (string/join " && " series)]))
 
+(defn mount-map
+  [locals from to]
+  (into
+   {}
+   (map
+    (fn [mapping]
+      [(get mapping from)
+       (get mapping to)])
+    locals)))
+
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
    execute the task specified by the given `task` map, downloading all inputs from cloud
    storage, executing the command in the specified container, and then uploading all
    outputs back to storage."
-  [{:keys [storage docker] :as state} task]
-  (let [inputs (process-inputs! state (:inputs task))
-        outputs (process-outputs! state (:outputs task))
-        remote (remote-mapping (:outputs task))
+  [{:keys [storage docker config] :as state} task]
+  (let [root (get-in config [:local :root])
+        inputs (find-locals (str root "/inputs") (:inputs task))
+        outputs (find-locals (str root "/outputs") (:outputs task))
+
         image (:image task)
-        _ (println "pulling docker image" image)
-        _ (docker/pull! docker image)
-        commands (join-commands (:commands task))
-        config {:image image
-                :mounts (merge inputs outputs)
-                :command commands}
-        _ (println "creating docker container from" config)
-        id (docker/create! docker config)]
+        commands (join-commands (:commands task))]
 
-    (println "starting container" id)
-    (docker/start! docker id)
+    (println "pulling docker image" image)
+    (docker/pull! docker image)
 
-    (println "executing container" id)
-    (docker/wait! docker id)
+    (doseq [input inputs]
+      (println "downloading" input)
+      (pull-input! storage input))
 
-    (println "execution complete!" id)
-    (doseq [[local internal] outputs]
-      (let [[bucket key] (get remote internal)]
-        (println "uploading" local "to" (str bucket ":" key))
-        (cloud/upload! storage bucket key local {})))))
+    (let [mounts (merge
+                  (mount-map inputs :local :internal)
+                  (mount-map outputs :local :internal))
+
+          config {:image image
+                  :mounts mounts
+                  :command commands}
+
+          _ (println "creating docker container from" config)
+          id (docker/create! docker config)]
+
+      (println "starting container" id)
+      (docker/start! docker id)
+
+      (println "executing container" id)
+      (docker/wait! docker id)
+
+      (println "execution complete!" id)
+
+      (doseq [output outputs]
+        (println "uploading" output)
+        (push-output! storage output)))))
 
 ;; (defn perform-task!
 ;;   "Given a state containing a connection to both cloud storage and some docker service, 
