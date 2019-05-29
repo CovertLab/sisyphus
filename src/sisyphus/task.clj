@@ -18,7 +18,7 @@
   (let [[prefix & parts] (string/split (full-name key) #":")]
     [prefix (string/join ":" parts)]))
 
-(defn find-local
+(defn find-local!
   [root [remote internal]]
   (let [[bucket key] (split-key remote)
         input (io/file root key)
@@ -31,22 +31,19 @@
       (let [base (io/file (.getParent input))]
         (.mkdirs base)
         (.createNewFile input)))
-    {:remote remote
-     :bucket bucket
+    {:bucket bucket
      :key key
      :archive archive
-     :root root
      :local local
-     :input input
      :directory? directory?
      :internal intern}))
 
-(defn find-locals
+(defn find-locals!
   [root locals]
-  (mapv (partial find-local root) locals))
+  (mapv (partial find-local! root) locals))
 
 (defn pull-input!
-  [storage {:keys [bucket key archive local directory? internal]}]
+  [storage {:keys [bucket key archive local directory?]}]
   (if directory?
     (do
       (cloud/download! storage bucket key archive)
@@ -102,8 +99,8 @@
    outputs back to storage."
   [{:keys [storage docker config] :as state} task]
   (let [root (get-in config [:local :root])
-        inputs (find-locals (str root "/inputs") (:inputs task))
-        outputs (find-locals (str root "/outputs") (:outputs task))
+        inputs (find-locals! (str root "/inputs") (:inputs task))
+        outputs (find-locals! (str root "/outputs") (:outputs task))
 
         image (:image task)
         commands (join-commands (:commands task))]
