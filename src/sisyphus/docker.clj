@@ -98,15 +98,6 @@
          create (.createContainer docker config)]
      (docker-utils/format-id (.id create)))))
 
-(defn start!
-  "Start the docker container with the given id."
-  [docker id]
-  (.startContainer docker id))
-
-(defn stop!
-  [docker id]
-  (docker/stop docker id))
-
 (defn logs
   [docker id]
   (docker/logs docker id))
@@ -136,7 +127,16 @@
   ([docker id] (attach-logs docker id System/out System/err))
   ([docker id out err]
    (let [attach (.attachContainer docker id (attach-params))]
-     (.attach attach out err))))
+     (.attach attach out err true))))
+
+(defn start!
+  "Start the docker container with the given id."
+  [docker id]
+  (.startContainer docker id))
+
+(defn stop!
+  [docker id]
+  (docker/stop docker id))
 
 (defn logs-seq
   "Convert a docker-client ^LogStream to a seq of lines."
@@ -186,5 +186,5 @@
 
 (defn wait!
   [docker id]
-  (attach-logs docker id)
+  ;; (future (attach-logs docker id))
   (docker/wait-container docker id))
