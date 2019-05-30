@@ -124,7 +124,8 @@
       (docker/start! docker id)
 
       (println "executing container" id)
-      (docker/wait! docker id)
+      (doseq [line (docker/logs docker id)]
+        (println line))
 
       (println "execution complete!" id)
 

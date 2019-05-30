@@ -7,6 +7,7 @@
   (:import
    [com.spotify.docker.client
     LogMessage
+    DockerClient
     DefaultDockerClient
     DockerClient$LogsParam
     DockerClient$AttachParameter
@@ -98,16 +99,30 @@
          create (.createContainer docker config)]
      (docker-utils/format-id (.id create)))))
 
-(defn logs
-  [docker id]
-  (docker/logs docker id))
-
 (defn logs-streams
   []
   (into-array
    DockerClient$LogsParam
    [(DockerClient$LogsParam/stdout)
-    (DockerClient$LogsParam/stderr)]))
+    (DockerClient$LogsParam/stderr)
+    (DockerClient$LogsParam/follow)]))
+
+(defn docker-logs
+  [docker id]
+  (.logs docker id (logs-streams)))
+
+(defn logs-seq
+  "Convert a docker-client ^LogStream to a seq of lines."
+  [logs]
+  (let [it (iterator-seq logs)
+        content (map #(.content ^LogMessage %) it)
+        stream (bytes/to-input-stream content)
+        reader (io/reader stream)]
+    (line-seq reader)))
+
+(defn logs
+  [docker id]
+  (logs-seq (docker-logs docker id)))
 
 (defn read-fully!
   [docker id]
@@ -137,15 +152,6 @@
 (defn stop!
   [docker id]
   (docker/stop docker id))
-
-(defn logs-seq
-  "Convert a docker-client ^LogStream to a seq of lines."
-  [logs]
-  (let [it (iterator-seq logs)
-        content (map #(.content ^LogMessage %) it)
-        stream (bytes/to-input-stream content)
-        reader (io/reader stream)]
-    (line-seq reader)))
 
 (defn exec-streams
   []
