@@ -192,5 +192,4 @@
 
 (defn wait!
   [docker id]
-  ;; (future (attach-logs docker id))
   (docker/wait-container docker id))
