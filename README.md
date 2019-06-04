@@ -12,6 +12,8 @@ Sisyphus is a task execution system that focuses on decentralization, running co
 
 ## setup
 
+Sisyphus uses [RabbitMQ](https://www.rabbitmq.com/) to receive task messages, so you need an instance running somewhere you can connect to.
+
 In order to use cloud storage and GCR you have to authorize with google. This means running `gcloud auth login` at some point with an account that is tied to google cloud, and you have to follow the directions [here](https://cloud.google.com/storage/docs/reference/libraries) for "setting up authentication" to access the cloud resources programmatically. 
 
 ## storage
