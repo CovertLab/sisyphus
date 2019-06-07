@@ -162,6 +162,12 @@
         (log! kafka task "upload" {:path output})
         (println "uploading" output)
         (push-output! storage output)
-        (status! kafka task "complete" {:data-complete output}))
 
-      (status! kafka task "complete" id))))
+        (status!
+         kafka task "complete"
+         {:event "data-complete"
+          :key output}))
+
+      (status!
+       kafka task "complete"
+       {:event "process-complete"}))))
