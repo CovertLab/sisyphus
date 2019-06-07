@@ -1,5 +1,6 @@
 (ns sisyphus.core
   (:require
+   [clojure.edn :as edn]
    [clojure.string :as string]
    [cheshire.core :as json]
    [taoensso.timbre :as log]
@@ -16,12 +17,12 @@
   (and
    id
    (= id (:id message))
-   (= :order "terminate")))
+   (= :event "terminate")))
 
 (defn sisyphus-handle-kafka
   [state producer topic message]
-  (let [{:keys [id docker-id]}
-        task (:task @(:state state))
+  (let [task (:task @(:state state))
+        {:keys [id docker-id]}
         (select-keys task [:id :docker-id])]
     (when (terminate? message id)
       (docker/kill! (:docker state) docker-id)
@@ -65,7 +66,7 @@
                       (:kafka config)
                       :handle-message
                       (partial sisyphus-handle-kafka state))
-        kafka (kafka/boot-kafka state (:kafka config))]
+        kafka (kafka/boot-kafka state kafka-config)]
     (assoc state :kafka kafka)))
 
 (defn start!
@@ -75,14 +76,25 @@
     (rabbit/start-consumer! (:rabbit state) (partial sisyphus-handle-rabbit state))
     state))
 
+(defn make-config
+  []
+  {:kafka
+   {:status-topic "sisyphus-status"
+    :log-topic "sisyphus-log"}
+   :local
+   {:root "/tmp/sisyphus"}})
+
+(defn read-path
+  [path]
+  (edn/read-string
+   (slurp path)))
+
 (defn -main
   [& args]
   (try
     (println "sisyphus rises....")
-    (let [config {:kafka
-                  {:status "sisyphus-status"}
-                  :local
-                  {:root "/tmp/sisyphus"}}
+    (let [path "resources/config/sisyphus.clj"
+          config (read-path path)
           state (start! config)
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]

@@ -8,9 +8,13 @@
 (def non-numeric-factory
   (factory/make-json-factory {:allow-non-numeric-numbers true}))
 
+(defn server-for
+  [config]
+  (str (:host config) ":" (:port config)))
+
 (defn producer-config
   [config]
-  {:bootstrap.servers (:host config)})
+  {:bootstrap.servers (server-for config)})
 
 (defn boot-producer
   [config]
@@ -28,7 +32,7 @@
 
 (defn consumer-config
   [config]
-  {:bootstrap.servers (:host config)
+  {:bootstrap.servers (server-for config)
    :enable.auto.commit "true"
    :auto.commit.interval.ms "1000"
    :group.id (get config :group-id "flow")
@@ -48,11 +52,11 @@
       (let [topics (last record)]
         (doseq [[topic messages] topics]
           (doseq [message messages]
-            (log/info topic ":" message)
+            (println topic ":" message)
             (let [value {topic (:value message)}]
               (handle state producer topic (:value message)))))))
     (catch Exception e
-      (log/error (.getMessage e))
+      (println (.getMessage e))
       (.printStackTrace e))))
 
 (defn consume
@@ -62,7 +66,7 @@
            (try
              (kafka/poll! consumer poll-interval)
              (catch Exception e
-               (log/error (.getMessage e))))]
+               (println (.getMessage e))))]
       (when-not (empty? records)
         (doseq [record records]
           (handle record)))
@@ -74,12 +78,12 @@
         consumer (boot-consumer config)
         handle (get config :handle-message (fn [_ _]))]
     (doseq [topic (:subscribe config)]
-      (log/info "subscribing to topic" topic)
+      (println "subscribing to topic" topic)
       (kafka/subscribe! consumer topic))
     {:config config
      :producer producer
      :consumer
-     (defer/future
+     (future
        (consume
         consumer
         (partial handle-message state producer handle)))}))

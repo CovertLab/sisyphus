@@ -5,7 +5,8 @@
    [cheshire.core :as json]
    [sisyphus.archive :as archive]
    [sisyphus.cloud :as cloud]
-   [sisyphus.docker :as docker]))
+   [sisyphus.docker :as docker]
+   [sisyphus.kafka :as kafka]))
 
 (def full-name
   "Extract the string representation of the given keyword. This is an extension to the
@@ -92,15 +93,25 @@
        (get mapping to)])
     locals)))
 
-(defn log
+(defn send!
   ([kafka task status message]
-   (log kafka task message (get-in kafka [:config :status-topic])))
-  ([kafka task message topic]
+   (send! kafka task message :status-topic))
+  ([kafka task status message topic]
    (kafka/send!
-    topic
-    {:id (:id task)
-     :status status
-     :message message})))
+    (get kafka :producer)
+    (get-in kafka [:config topic])
+    (merge
+     {:id (:id task)
+      :status status}
+     message))))
+
+(defn log!
+  [kafka task status message]
+  (send! kafka task status message :log-topic))
+
+(defn status!
+  [kafka task status message]
+  (send! kafka task status message :status-topic))
 
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
@@ -116,12 +127,12 @@
         commands (join-commands (:commands task))]
 
     (println "pulling docker image" image)
-    (log kafka task "pull" (str "pulling docker image" image))
+    (log! kafka task "pull" {:image image})
     (docker/pull! docker image)
 
     (doseq [input inputs]
       (println "downloading" input)
-      (log kafka task "download" (str "downloading" input))
+      (log! kafka task "download" {:input input})
       (pull-input! storage input))
 
     (let [mounts (mount-map (concat inputs outputs) :local :internal)
@@ -132,22 +143,25 @@
           _ (println "creating docker container from" config)
           id (docker/create! docker config)]
 
-      (log kafka task "create" (str "created docker container " id " from " config))
+      (status! kafka task "create" {:docker-id id :docker-config config})
       (swap! state assoc-in [:task :docker-id] id)
 
+      (status! kafka task "start" {:docker-id id})
       (println "starting container" id)
       (docker/start! docker id)
 
       (println "executing container" id)
       (doseq [line (docker/logs docker id)]
-        (log kafka task "log" line :log-topic)
+        (log! kafka task "log" {:line line})
         (println line))
 
+      (status! kafka task "stop" {:docker-id id})
       (println "execution complete!" id)
 
       (doseq [output outputs]
+        (log! kafka task "upload" {:path output})
         (println "uploading" output)
-        (log kafka task "complete" output)
-        (push-output! storage output))
+        (push-output! storage output)
+        (status! kafka task "complete" {:data-complete output}))
 
-      (log kafka task "complete" id))))
+      (status! kafka task "complete" id))))
