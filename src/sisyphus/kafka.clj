@@ -38,15 +38,8 @@
    :group.id (get config :group-id "flow")
    :auto.offset.reset "latest"})
 
-(defn boot-consumer
-  [config]
-  (kafka/consumer
-   (consumer-config config)
-   (kafka/keyword-deserializer)
-   (kafka/json-deserializer)))
-
 (defn handle-message
-  [state producer handle record]
+  [handle record]
   (try
     (if (= (first record) :by-topic)
       (let [topics (last record)]
@@ -54,7 +47,7 @@
           (doseq [message messages]
             (println topic ":" message)
             (let [value {topic (:value message)}]
-              (handle state producer topic (:value message)))))))
+              (handle topic (:value message)))))))
     (catch Exception e
       (println (.getMessage e))
       (.printStackTrace e))))
@@ -72,18 +65,25 @@
           (handle record)))
       (recur (kafka/poll! consumer poll-interval)))))
 
-(defn boot-kafka
-  [state config]
-  (let [producer (boot-producer config)
-        consumer (boot-consumer config)
-        handle (get config :handle-message (fn [_ _]))]
+(defn boot-consumer
+  [config handle]
+  (let [consumer (kafka/consumer
+                  (consumer-config config)
+                  (kafka/keyword-deserializer)
+                  (kafka/json-deserializer))]
     (doseq [topic (:subscribe config)]
-      (println "subscribing to topic" topic)
       (kafka/subscribe! consumer topic))
-    {:config config
-     :producer producer
-     :consumer
-     (future
-       (consume
-        consumer
-        (partial handle-message state producer handle)))}))
+    {:consumer consumer
+     :future (future
+               (consume
+                consumer
+                (partial handle-message handle)))}))
+
+(defn boot-kafka
+  [config handle]
+  (let [producer (boot-producer config)
+        consumer (boot-consumer config handle)]
+    (merge
+     consumer
+     {:config config
+      :producer producer})))

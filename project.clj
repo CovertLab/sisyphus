@@ -1,4 +1,4 @@
-(defproject sisyphus "0.0.2"
+(defproject sisyphus "0.0.3"
   :description "Eternally execute tasks"
   :url "http://github.com/CovertLab/sisyphus"
   :license {:name "MIT License"
@@ -7,6 +7,6 @@
                  [com.taoensso/timbre "4.8.0"]
                  [lispyclouds/clj-docker-client "0.2.3"]
                  [com.novemberain/langohr "5.1.0"]
-                 [com.google.cloud/google-cloud-storage "1.70.0"]
+                 [com.google.cloud/google-cloud-storage "1.74.0"]
                  [spootnik/kinsky "0.1.22"]]
   :main sisyphus.core)

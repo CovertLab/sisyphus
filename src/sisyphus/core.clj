@@ -20,15 +20,16 @@
    (= :event "terminate")))
 
 (defn sisyphus-handle-kafka
-  [state producer topic message]
+  [state topic message]
   (let [task (:task @(:state state))
         {:keys [id docker-id]}
         (select-keys task [:id :docker-id])]
     (when (terminate? message id)
       (docker/kill! (:docker state) docker-id)
+      (task/status! (:kafka state) (:task @state) "kill" task)
       (swap! (:state state) assoc :status :waiting :task {})
       (kafka/send!
-       producer
+       (get-in state [:kafka :producer])
        (get-in state [:config :kafka :status-topic])
        {:id id
         :task task
@@ -62,11 +63,8 @@
                (atom
                 {:status :waiting
                  :task {}})}
-        kafka-config (assoc
-                      (:kafka config)
-                      :handle-message
-                      (partial sisyphus-handle-kafka state))
-        kafka (kafka/boot-kafka state kafka-config)]
+        handle (partial sisyphus-handle-kafka state)
+        kafka (kafka/boot-kafka (:kafka config) handle)]
     (assoc state :kafka kafka)))
 
 (defn start!
