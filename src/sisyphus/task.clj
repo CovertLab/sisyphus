@@ -166,7 +166,8 @@
         (status!
          kafka task "complete"
          {:event "data-complete"
-          :key (str (:bucket output) ":" (:key output))}))
+          :root (:bucket output)
+          :key (:key output)}))
 
       (status!
        kafka task "complete"
