@@ -44,7 +44,7 @@
     (println "performing task" task)
     (try
       (do
-        (swap! state assoc :task task)
+        (swap! (:state state) assoc :task task)
         (task/perform-task! state task)
         (langohr/ack channel (:delivery-tag metadata))
         (println "task complete!"))
