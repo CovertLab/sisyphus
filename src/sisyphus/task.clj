@@ -92,12 +92,22 @@
        (get mapping to)])
     locals)))
 
+(defn log
+  ([kafka task status message]
+   (log kafka task message (get-in kafka [:config :status-topic])))
+  ([kafka task message topic]
+   (kafka/send!
+    topic
+    {:id (:id task)
+     :status status
+     :message message})))
+
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
    execute the task specified by the given `task` map, downloading all inputs from cloud
    storage, executing the command in the specified container, and then uploading all
    outputs back to storage."
-  [{:keys [storage docker config] :as state} task]
+  [{:keys [storage kafka docker config state]} task]
   (let [root (get-in config [:local :root])
         inputs (find-locals! (str root "/inputs") (:inputs task))
         outputs (find-locals! (str root "/outputs") (:outputs task))
@@ -106,10 +116,12 @@
         commands (join-commands (:commands task))]
 
     (println "pulling docker image" image)
+    (log kafka task "pull" (str "pulling docker image" image))
     (docker/pull! docker image)
 
     (doseq [input inputs]
       (println "downloading" input)
+      (log kafka task "download" (str "downloading" input))
       (pull-input! storage input))
 
     (let [mounts (mount-map (concat inputs outputs) :local :internal)
@@ -120,15 +132,22 @@
           _ (println "creating docker container from" config)
           id (docker/create! docker config)]
 
+      (log kafka task "create" (str "created docker container " id " from " config))
+      (swap! state assoc-in [:task :docker-id] id)
+
       (println "starting container" id)
       (docker/start! docker id)
 
       (println "executing container" id)
       (doseq [line (docker/logs docker id)]
+        (log kafka task "log" line :log-topic)
         (println line))
 
       (println "execution complete!" id)
 
       (doseq [output outputs]
         (println "uploading" output)
-        (push-output! storage output)))))
+        (log kafka task "complete" output)
+        (push-output! storage output))
+
+      (log kafka task "complete" id))))

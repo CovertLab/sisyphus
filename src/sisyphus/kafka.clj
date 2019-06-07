@@ -50,8 +50,7 @@
           (doseq [message messages]
             (log/info topic ":" message)
             (let [value {topic (:value message)}]
-              (handle producer topic (:value message))
-              (swap! state assoc :last-message value))))))
+              (handle state producer topic (:value message)))))))
     (catch Exception e
       (log/error (.getMessage e))
       (.printStackTrace e))))
@@ -77,9 +76,10 @@
     (doseq [topic (:subscribe config)]
       (log/info "subscribing to topic" topic)
       (kafka/subscribe! consumer topic))
-    {:producer producer
+    {:config config
+     :producer producer
      :consumer
      (defer/future
        (consume
         consumer
-        (partial handle-message state bus producer handle)))}))
+        (partial handle-message state producer handle)))}))

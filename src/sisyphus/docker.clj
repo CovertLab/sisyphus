@@ -153,12 +153,20 @@
   [docker id]
   (docker/stop docker id))
 
+(defn kill!
+  [docker id]
+  (.killContainer docker id))
+
+(defn remove!
+  [docker id]
+  (.removeContainer docker id))
+
 (defn exec-streams
-  []
-  (into-array
-   DockerClient$ExecCreateParam
-   [(DockerClient$ExecCreateParam/attachStdout)
-    (DockerClient$ExecCreateParam/attachStderr)]))
+     []
+     (into-array
+      DockerClient$ExecCreateParam
+      [(DockerClient$ExecCreateParam/attachStdout)
+       (DockerClient$ExecCreateParam/attachStderr)]))
 
 (defn exec!
   "Execute the given command in a running container."
