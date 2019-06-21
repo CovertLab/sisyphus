@@ -87,7 +87,7 @@
         (swap! (:state state) assoc :task task)
         (task/perform-task! state task)
         (langohr/ack channel (:delivery-tag metadata))
-        (swap! (:state state) assoc :timer (apoptosis-timer config))
+        (swap! (:state state) assoc :timer (apoptosis-timer (:config state)))
         (println "task complete!"))
       (catch Exception e (.printStackTrace e)))))
 
