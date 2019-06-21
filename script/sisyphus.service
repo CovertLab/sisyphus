@@ -1,0 +1,18 @@
+# place this file in /etc/systemd/system/sisyphus.service
+#
+# then:
+#   > sudo systemctl start sisyphus
+#   > sudo systemctl enable sisyphus
+
+[Unit]
+Description=Sisyphus
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /home/sisyphus/sisyphus/script/boot.sh
+User=sisyphus
+Group=sisyphus
+Environment=GOOGLE_APPLICATION_CREDENTIALS=/home/sisyphus/.cloud.json
+
+[Install]
+WantedBy=multi-user.target
