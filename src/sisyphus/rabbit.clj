@@ -9,6 +9,9 @@
    [langohr.consumers :as lconsumers]
    [langohr.basic :as lbasic]))
 
+(def config-keys
+  [:host :port :username :vhost :password])
+
 (defn connect!
   "Connect to the rabbitmq service. Accepts a `config` map containing several possible options:
      * :queue - name of the rabbit queue to connect to (default 'sisyphus')
@@ -16,7 +19,7 @@
      * :routing-key - routing key to use for messages (defaults to 'sisyphus')
    Returns a map containing all of the rabbitmq connection information."
   [config]
-  (let [connection (lcore/connect)
+  (let [connection (lcore/connect (select-keys config config-keys))
         channel (lchannel/open connection)
         _ (lbasic/qos channel 1)
         queue-name (get config :queue "sisyphus")
