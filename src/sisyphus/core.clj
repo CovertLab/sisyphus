@@ -31,10 +31,13 @@
   (let [self (signature)]
     (sh/sh
      "gcloud"
+     "--quiet"
      "compute"
      "instances"
      "delete"
-     self)
+     self
+     "--zone"
+     "us-west1-b")
     (System/exit 0)))
 
 (defn timer
