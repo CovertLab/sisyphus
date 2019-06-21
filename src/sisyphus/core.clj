@@ -33,7 +33,7 @@
       (println self "terminating")
       (prinln
        (sh/sh
-        "gcloud"
+        "/snap/bin/gcloud"
         "--quiet"
         "compute"
         "instances"
