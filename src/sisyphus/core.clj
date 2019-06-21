@@ -79,6 +79,21 @@
   [config]
   (timer (get config :wait apoptosis-interval) apoptosis))
 
+(defn run-state!
+  [state task]
+  (assoc
+   state
+   :task task
+   :status :running))
+
+(defn reset-state!
+  [state config]
+  (assoc
+   state
+   :timer (apoptosis-timer config)
+   :task {}
+   :status :waiting))
+
 (defn sisyphus-handle-rabbit
   "Handle an incoming task message by performing the task it represents."
   [state channel metadata ^bytes payload]
@@ -88,12 +103,15 @@
     (try
       (do
         (future-cancel (get @(:state state) :timer))
-        (swap! (:state state) assoc :task task)
+        (swap! (:state state) run-state! task)
         (task/perform-task! state task)
         (langohr/ack channel (:delivery-tag metadata))
-        (swap! (:state state) assoc :timer (apoptosis-timer (:config state)))
-        (println "task complete!"))
-      (catch Exception e (.printStackTrace e)))))
+        (swap! (:state state) reset-state! (:config state))
+        (println "task complete!" task))
+      (catch Exception e
+        (println "task error!" task)
+        (.printStackTrace e)
+        (swap! (:state state) reset-state! (:config state))))))
 
 (defn connect!
   [config]

@@ -2,6 +2,7 @@
 
 apt update
 apt install -y openjdk-11-jdk
+apt install -y docker.io
 
 adduser sisyphus
 su -l sisyphus
