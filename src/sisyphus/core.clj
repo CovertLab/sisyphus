@@ -2,15 +2,47 @@
   (:require
    [clojure.edn :as edn]
    [clojure.string :as string]
+   [clojure.java.shell :as sh]
    [cheshire.core :as json]
    [taoensso.timbre :as log]
    [langohr.basic :as langohr]
+   [clj-http.client :as http]
    [sisyphus.archive :as archive]
    [sisyphus.kafka :as kafka]
    [sisyphus.cloud :as cloud]
    [sisyphus.docker :as docker]
    [sisyphus.task :as task]
    [sisyphus.rabbit :as rabbit]))
+
+(def apoptosis-interval 3)
+
+(defn signature
+  []
+  (try
+    (:body
+     (http/get
+      "http://metadata.google.internal/computeMetadata/v1/instance/name"
+      {:headers
+       {:metadata-flavor "Google"}}))
+    (catch Exception e "local")))
+
+(defn apoptosis
+  []
+  (let [self (signature)]
+    (println "dying.........................")
+    ;; (sh/sh
+    ;;  "gcloud"
+    ;;  "compute"
+    ;;  "instances"
+    ;;  "delete"
+    ;;  self)
+    (System/exit 0)))
+
+(defn timer
+  [wait f]
+  (future
+    (Thread/sleep wait)
+    (f)))
 
 (defn terminate?
   [message id]
@@ -44,9 +76,11 @@
     (println "performing task" task)
     (try
       (do
+        (future-cancel (get @(:state state) :timer))
         (swap! (:state state) assoc :task task)
         (task/perform-task! state task)
         (langohr/ack channel (:delivery-tag metadata))
+        (swap! (:state state) assoc :timer (timer apoptosis-interval apoptosis))
         (println "task complete!"))
       (catch Exception e (.printStackTrace e)))))
 
@@ -62,7 +96,8 @@
                :state
                (atom
                 {:status :waiting
-                 :task {}})}
+                 :task {}
+                 :timer (timer (get config :wait apoptosis-interval) apoptosis)})}
         handle (partial sisyphus-handle-kafka state)
         kafka (kafka/boot-kafka (:kafka config) handle)]
     (assoc state :kafka kafka)))
