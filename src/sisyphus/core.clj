@@ -31,7 +31,7 @@
   (try
     (let [self (signature)]
       (println self "terminating")
-      (prinln
+      (println
        (sh/sh
         "/snap/bin/gcloud"
         "--quiet"
