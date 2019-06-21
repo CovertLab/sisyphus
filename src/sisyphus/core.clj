@@ -29,13 +29,12 @@
 (defn apoptosis
   []
   (let [self (signature)]
-    (println "dying.........................")
-    ;; (sh/sh
-    ;;  "gcloud"
-    ;;  "compute"
-    ;;  "instances"
-    ;;  "delete"
-    ;;  self)
+    (sh/sh
+     "gcloud"
+     "compute"
+     "instances"
+     "delete"
+     self)
     (System/exit 0)))
 
 (defn timer
