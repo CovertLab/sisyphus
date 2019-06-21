@@ -81,7 +81,7 @@
                            (concat tokens [">" stdout])
                            tokens))]
             passage))]
-    ["bash" "-c" (string/join " && " series)]))
+    ["sh" "-c" (string/join " && " series)]))
 
 (defn mount-map
   [locals from to]
