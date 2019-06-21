@@ -14,7 +14,7 @@
    [sisyphus.task :as task]
    [sisyphus.rabbit :as rabbit]))
 
-(def apoptosis-interval 3)
+(def apoptosis-interval 300000)
 
 (defn signature
   []
@@ -127,10 +127,5 @@
     (println "sisyphus rises....")
     (let [path "resources/config/sisyphus.clj"
           config (read-path path)
-          state (start! config)
-          signal (reify sun.misc.SignalHandler
-                   (handle [this signal]
-                     (rabbit/close! (:rabbit state))
-                     (println "sisyphus rests")))]
-      (sun.misc.Signal/handle (sun.misc.Signal. "INT") signal)
+          state (start! config)]
       @(promise))))
