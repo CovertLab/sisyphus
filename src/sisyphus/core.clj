@@ -28,18 +28,21 @@
 
 (defn apoptosis
   []
-  (let [self (signature)]
-    (println self "terminating")
-    (sh/sh
-     "gcloud"
-     "--quiet"
-     "compute"
-     "instances"
-     "delete"
-     self
-     "--zone"
-     "us-west1-b")
-    (System/exit 0)))
+  (try
+    (let [self (signature)]
+      (println self "terminating")
+      (sh/sh
+       "gcloud"
+       "--quiet"
+       "compute"
+       "instances"
+       "delete"
+       self
+       "--zone"
+       "us-west1-b")
+      (System/exit 0))
+    (catch Exception e
+      (.printStackTrace e))))
 
 (defn timer
   [wait f]
