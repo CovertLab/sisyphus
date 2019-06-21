@@ -29,6 +29,7 @@
 (defn apoptosis
   []
   (let [self (signature)]
+    (println self "terminating")
     (sh/sh
      "gcloud"
      "--quiet"
@@ -70,6 +71,10 @@
         :status "killed"
         :by message}))))
 
+(defn apoptosis-timer
+  [config]
+  (timer (get config :wait apoptosis-interval) apoptosis))
+
 (defn sisyphus-handle-rabbit
   "Handle an incoming task message by performing the task it represents."
   [state channel metadata ^bytes payload]
@@ -82,7 +87,7 @@
         (swap! (:state state) assoc :task task)
         (task/perform-task! state task)
         (langohr/ack channel (:delivery-tag metadata))
-        (swap! (:state state) assoc :timer (timer apoptosis-interval apoptosis))
+        (swap! (:state state) assoc :timer (apoptosis-timer config))
         (println "task complete!"))
       (catch Exception e (.printStackTrace e)))))
 
@@ -99,7 +104,7 @@
                (atom
                 {:status :waiting
                  :task {}
-                 :timer (timer (get config :wait apoptosis-interval) apoptosis)})}
+                 :timer (apoptosis-timer config)})}
         handle (partial sisyphus-handle-kafka state)
         kafka (kafka/boot-kafka (:kafka config) handle)]
     (assoc state :kafka kafka)))
