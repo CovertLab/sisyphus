@@ -1,0 +1,5 @@
+* create intermediate directory entries in object store for nested keys
+* store archive with .tgz suffix
+* clear output directories between task runs
+* put commands in namespace
+* store timestamp, sisyphus id in logs
