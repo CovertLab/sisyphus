@@ -107,10 +107,12 @@
 
 (defn log!
   [kafka task status message]
+  (println status ":" message)
   (send! kafka task status message :log-topic))
 
 (defn status!
   [kafka task status message]
+  (println status ":" message task)
   (send! kafka task status message :status-topic))
 
 (defn perform-task!
@@ -119,57 +121,59 @@
    storage, executing the command in the specified container, and then uploading all
    outputs back to storage."
   [{:keys [storage kafka docker config state]} task]
-  (let [root (get-in config [:local :root])
-        inputs (find-locals! (str root "/inputs") (:inputs task))
-        outputs (find-locals! (str root "/outputs") (:outputs task))
+  (try
+    (let [root (get-in config [:local :root])
+          inputs (find-locals! (str root "/inputs") (:inputs task))
+          outputs (find-locals! (str root "/outputs") (:outputs task))
 
-        image (:image task)
-        commands (join-commands (:commands task))]
+          image (:image task)
+          commands (join-commands (:commands task))]
 
-    (println "pulling docker image" image)
-    (log! kafka task "pull" {:image image})
-    (docker/pull! docker image)
+      (log! kafka task "pull" {:image image})
+      (docker/pull! docker image)
 
-    (doseq [input inputs]
-      (println "downloading" input)
-      (log! kafka task "download" {:input input})
-      (pull-input! storage input))
+      (doseq [input inputs]
+        (log! kafka task "download" {:input input})
+        (pull-input! storage input))
 
-    (let [mounts (mount-map (concat inputs outputs) :local :internal)
-          config {:image image
-                  :mounts mounts
-                  :command commands}
+      (let [mounts (mount-map (concat inputs outputs) :local :internal)
+            config {:image image
+                    :mounts mounts
+                    :command commands}
 
-          _ (println "creating docker container from" config)
-          id (docker/create! docker config)]
+            _ (println "creating docker container from" config)
+            id (docker/create! docker config)]
 
-      (status! kafka task "create" {:docker-id id :docker-config config})
-      (swap! state assoc-in [:task :docker-id] id)
+        (status! kafka task "create" {:docker-id id :docker-config config})
+        (swap! state assoc-in [:task :docker-id] id)
 
-      (status! kafka task "start" {:docker-id id})
-      (println "starting container" id)
-      (docker/start! docker id)
+        (status! kafka task "start" {:docker-id id})
+        (docker/start! docker id)
 
-      (println "executing container" id)
-      (doseq [line (docker/logs docker id)]
-        (log! kafka task "log" {:line line})
-        (println line))
+        (doseq [line (docker/logs docker id)]
+          (log! kafka task "log" {:line line}))
 
-      (status! kafka task "stop" {:docker-id id})
-      (println "execution complete!" id)
+        (status! kafka task "stop" {:docker-id id})
 
-      (doseq [output outputs]
-        (log! kafka task "upload" {:path output})
-        (println "uploading" output)
-        (push-output! storage output)
+        (doseq [output outputs]
+          (log! kafka task "upload" {:path output})
+          (push-output! storage output)
+
+          (status!
+           kafka task "complete"
+           {:event "data-complete"
+            :root (:bucket output)
+            :path (:key output)
+            :key (str (:bucket output) ":" (:key output))}))
 
         (status!
          kafka task "complete"
-         {:event "data-complete"
-          :root (:bucket output)
-          :path (:key output)
-          :key (str (:bucket output) ":" (:key output))}))
-
-      (status!
-       kafka task "complete"
-       {:event "process-complete"}))))
+         {:event "process-complete"})))
+    (catch Exception e
+      (let [message (.getMessage e)
+            trace (.getStackTrace e)]
+        (status!
+         kafka task "error"
+         {:event "process-error"
+          :message message
+          :trace trace})))))

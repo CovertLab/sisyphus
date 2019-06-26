@@ -48,4 +48,6 @@
   [storage bucket key path]
   (let [blob-id (BlobId/of bucket key)
         blob (.get storage blob-id)]
-    (.downloadTo blob (get-path path))))
+    (if blob
+      (.downloadTo blob (get-path path))
+      (println "No blob with the key" (.toString blob-id)))))

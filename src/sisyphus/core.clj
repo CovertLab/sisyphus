@@ -15,6 +15,7 @@
    [sisyphus.rabbit :as rabbit]))
 
 (def apoptosis-interval 300000)
+(def wait-interval (* 10 apoptosis-interval))
 
 (defn signature
   []
@@ -76,11 +77,13 @@
         :by message}))))
 
 (defn apoptosis-timer
-  [config]
-  (timer (get config :wait apoptosis-interval) apoptosis))
+  [delay]
+  (timer delay apoptosis))
 
 (defn run-state!
   [state task]
+  (if-let [time (:timer state)]
+    (future-cancel time))
   (assoc
    state
    :task task
@@ -90,7 +93,7 @@
   [state config]
   (assoc
    state
-   :timer (apoptosis-timer config)
+   :timer (apoptosis-timer (get-in config [:timer :delay] apoptosis-interval))
    :task {}
    :status :waiting))
 
@@ -100,18 +103,12 @@
   (let [raw (String. payload "UTF-8")
         task (json/parse-string raw true)]
     (println "performing task" task)
-    (try
-      (do
-        (future-cancel (get @(:state state) :timer))
-        (swap! (:state state) run-state! task)
-        (task/perform-task! state task)
-        (langohr/ack channel (:delivery-tag metadata))
-        (swap! (:state state) reset-state! (:config state))
-        (println "task complete!" task))
-      (catch Exception e
-        (println "task error!" task)
-        (.printStackTrace e)
-        (swap! (:state state) reset-state! (:config state))))))
+    (do
+      (swap! (:state state) run-state! task)
+      (task/perform-task! state task)
+      (langohr/ack channel (:delivery-tag metadata))
+      (swap! (:state state) reset-state! (:config state))
+      (println "task complete!" task))))
 
 (defn connect!
   [config]
@@ -126,7 +123,8 @@
                (atom
                 {:status :waiting
                  :task {}
-                 :timer (apoptosis-timer config)})}
+                 :timer (apoptosis-timer
+                         (get-in config [:timer :initial] wait-interval))})}
         handle (partial sisyphus-handle-kafka state)
         kafka (kafka/boot-kafka (:kafka config) handle)]
     (assoc state :kafka kafka)))
@@ -143,6 +141,9 @@
   {:kafka
    {:status-topic "sisyphus-status"
     :log-topic "sisyphus-log"}
+   :timer
+   {:initial wait-interval
+    :delay apoptosis-interval}
    :local
    {:root "/tmp/sisyphus"}})
 
