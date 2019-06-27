@@ -4,6 +4,7 @@
 * put commands in namespace
 * store timestamp, sisyphus id in logs
 * put Commands in the namespace like Processes
+* almost always filter logs for a specific job (= user + timestamp); sometimes for a specific task within a job
 * ensure that running a Command always begins without previous output files even if it reuses an open docker container
 * rename 'key' to 'name'?
 * unit tests
