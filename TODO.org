@@ -3,3 +3,17 @@
 * clear output directories between task runs
 * put commands in namespace
 * store timestamp, sisyphus id in logs
+* put Commands in the namespace like Processes
+* ensure that running a Command always begins without previous output files even if it reuses an open docker container
+* rename 'key' to 'name'?
+* unit tests
+* test what happens when things go wrong. does it emit helpful error messages? can it do self-repair?
+* use a docker image version tag? how to feed it to the workflow builder?
+* auto-launch worker nodes
+* ability to post a workflow directly from your desktop?
+* tools to simplify and speed up the dev cycle
+* implement nightly builds and PR builds
+* clean up each workflow job when done
+* obviate everyone needing a personal GCE VM
+* optimization: reuse a running docker container when the previous task requested the same image
+* optimization?: a separate set of nodes for each job
