@@ -171,7 +171,7 @@
          {:event "process-complete"})))
     (catch Exception e
       (let [message (.getMessage e)
-            trace (.getStackTrace e)]
+            trace (map #(.toString %) (.getStackTrace e))]
         (status!
          kafka task "error"
          {:event "process-error"

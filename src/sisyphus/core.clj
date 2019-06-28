@@ -106,9 +106,9 @@
     (do
       (swap! (:state state) run-state! task)
       (task/perform-task! state task)
+      (println "task complete!" task)
       (langohr/ack channel (:delivery-tag metadata))
-      (swap! (:state state) reset-state! (:config state))
-      (println "task complete!" task))))
+      (swap! (:state state) reset-state! (:config state)))))
 
 (defn connect!
   [config]

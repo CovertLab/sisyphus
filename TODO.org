@@ -1,3 +1,4 @@
+* sisyphus gets in bad state with rabbit when a task fails
 * create intermediate directory entries in object store for nested keys
 * store archive with .tgz suffix
 * clear output directories between task runs
