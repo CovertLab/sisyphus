@@ -1,4 +1,5 @@
 * sisyphus gets in bad state with rabbit when a task fails
+* pass separate tokens to Docker so the client doesn't have to do complex shell quoting (we aren't using the && or > features)
 * the namespace should be independent of the bucket name
 * flow.trigger('sisyphus') gave a json error
 * ^C out of flow.listen() should not print a bunch of clutter in ipython
@@ -11,7 +12,7 @@
 * return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
 * create intermediate directory entries in object store for nested keys
 
-* support or gracefully-reject relative local paths within the container
+* support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 * worker nodes need to be robust to task failures
 * the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
 * auto-create the output bucket?
