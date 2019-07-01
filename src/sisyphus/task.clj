@@ -142,7 +142,8 @@
                     :command commands}
 
             _ (println "creating docker container from" config)
-            id (docker/create! docker config)]
+            id (docker/create! docker config)
+            lines (atom [])]
 
         (status! kafka task "create" {:docker-id id :docker-config config})
         (swap! state assoc-in [:task :docker-id] id)
@@ -151,20 +152,28 @@
         (docker/start! docker id)
 
         (doseq [line (docker/logs docker id)]
+          (swap! lines conj line)
           (log! kafka task "log" {:line line}))
 
-        (status! kafka task "stop" {:docker-id id})
+        (status! kafka task "container" {:docker-id id :status (.toString (docker/info docker id))})
 
-        (doseq [output outputs]
-          (log! kafka task "upload" {:path output})
-          (push-output! storage output)
+        (let [code (docker/exit-code (docker/info docker id))]
+          (status! kafka task "exit" {:docker-id id :code code})
+          (if (> code 0)
+            (status!
+             kafka task "error"
+             {:event "process-error"
+              :log @lines})
+            (doseq [output outputs]
+              (log! kafka task "upload" {:path output})
+              (push-output! storage output)
 
-          (status!
-           kafka task "complete"
-           {:event "data-complete"
-            :root (:bucket output)
-            :path (:key output)
-            :key (str (:bucket output) ":" (:key output))}))
+              (status!
+               kafka task "complete"
+               {:event "data-complete"
+                :root (:bucket output)
+                :path (:key output)
+                :key (str (:bucket output) ":" (:key output))}))))
 
         (status!
          kafka task "complete"
@@ -174,6 +183,6 @@
             trace (map #(.toString %) (.getStackTrace e))]
         (status!
          kafka task "error"
-         {:event "process-error"
+         {:event "container-error"
           :message message
           :trace trace})))))

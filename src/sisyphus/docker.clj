@@ -161,6 +161,14 @@
   [docker id]
   (.removeContainer docker id))
 
+(defn info
+  [docker id]
+  (.inspectContainer docker id))
+
+(defn exit-code
+  [info]
+  (.exitCode (.state info)))
+
 (defn exec-streams
      []
      (into-array
