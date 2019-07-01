@@ -83,6 +83,10 @@
             passage))]
     ["sh" "-c" (string/join " && " series)]))
 
+(defn first-command
+  [commands]
+  (:command (first commands)))
+
 (defn mount-map
   [locals from to]
   (into
@@ -127,7 +131,8 @@
           outputs (find-locals! (str root "/outputs") (:outputs task))
 
           image (:image task)
-          commands (join-commands (:commands task))]
+          ;; commands (join-commands (:commands task))
+          commands (first-command (:commands task))]
 
       (log! kafka task "pull" {:image image})
       (docker/pull! docker image)
