@@ -9,16 +9,13 @@
 * a parca task never got picked up by a worker
 * WCM output .tgz archives aren't getting stored in GCS; only directory entries are stored
 * the Simulation task failed trying to delete the output directory:
-    Device or resource busy: '/wcEcoli/out/wf/wildtype_000000/000000/generation_000000/000000/simOut/'
-
+** Device or resource busy: '/wcEcoli/out/wf/wildtype_000000/000000/generation_000000/000000/simOut/'
 * return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
 * create intermediate directory entries in object store for nested keys
-
 * support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 * worker nodes need to be robust to task failures
 * the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
 * auto-create the output bucket?
-
 * store archive with .tgz suffix
 * need more error detection & reporting
 * probably need worker nodes with more RAM and disk space; maybe configurable
@@ -40,21 +37,16 @@
 ** streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
 ** ideally, make a single log entry for a stack traceback
 ** support stackdriver logging and filtering?
-
 * write a step-by-step how-to document for lab members
 ** setting the "sisyphus" service account when configuring the GCE instance works, which obviates all the activate-service-account steps
-
 * speed up the workflow
 ** how come it takes (at least sometimes) many minutes for workers to start picking up tasks?
 ** tasks run very slowly. do we need VMs with faster CPUs? more RAM? more cores? GPUs? larger disk?
 ** the log output comes out in batches of lines with many minutes between them
-
 * documentation
 ** document all the GCE VM setup factors: machine type? boot disk size? OS? Identity and API access? additional access scopes? label e.g. `role=home-base`? startup script? metadata, e.g. configuration for accessing the other servers?
-
 * clarification
 ** rename 'key' to 'name'? or to '_name' and use sorted key printouts (e.g. via pprint) so the _name shows up first (which is where you need it)
-
 * ensure that running a Command always begins without previous output files even if it reuses an open docker container
 * unit tests
 * test what happens when things go wrong. does it emit helpful error messages? can it do self-repair?
