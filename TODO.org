@@ -3,14 +3,10 @@
 * worker nodes need to be robust to task failures
 * the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
 =======
-* it seems that one has to launch the workers, then wait for them to be ready, and only then trigger the workflow
-otherwise trigger() doesn't start it
->>>>>>> 0a87c67f2c9dcd522efd8cdd2276960e862cbe42
+* it seems that one has to launch the workers, then wait for them to be ready, and only then trigger the workflow, otherwise trigger() doesn't start it
 * the namespace should be independent of the bucket name
 * a parca task never got picked up by a worker
-<<<<<<< HEAD
 * ^C out of flow.listen() should not print a bunch of clutter in ipython
-=======
 * the Simulation task failed trying to delete the output directory:
 ** Device or resource busy: '/wcEcoli/out/wf/wildtype_000000/000000/generation_000000/000000/simOut/'
 * are there rules programmers need to know about tasks deleting and writing into the output directories?
