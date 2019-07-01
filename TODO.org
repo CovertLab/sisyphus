@@ -13,7 +13,6 @@
 *** Yeah, it looks like we will ultimately need some kind of automatic launching, probably mediated by Gaia.
 ** worker nodes need to be robust to task failures
 ** the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
-=======
 ** auto-launch worker nodes
 ** store archive with .tgz suffix
 ** rename 'key' to 'name'? or to '_name' and use sorted key printouts (e.g. via pprint) so the _name shows up first (which is where you need it)
