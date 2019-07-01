@@ -1,8 +1,14 @@
 * sisyphus gets in bad state with rabbit when a task fails
+<<<<<<< HEAD
 * worker nodes need to be robust to task failures
 * the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
+=======
+* it seems that one has to launch the workers, then wait for them to be ready, and only then trigger the workflow
+otherwise trigger() doesn't start it
+>>>>>>> 0a87c67f2c9dcd522efd8cdd2276960e862cbe42
 * the namespace should be independent of the bucket name
 * a parca task never got picked up by a worker
+<<<<<<< HEAD
 * // Sisyphus created empty directories rather than storing archive files for WCM task outputs e.g. sisyphus/data/jerry/20190628.204402/kb/
 * // Sisyphus created directories for failed tasks e.g. sisyphus/data/jerry/20190628.204402/plotOut/
 * // pass an array of CLI tokens to Docker so the client doesn't have to do complex shell quoting (jerry put quoting into the WCM workflow as a temporary workaround) (maybe drop the unused && and > features)
@@ -10,8 +16,12 @@
 * // Sisyphus wrote outputs to GCS after some failed tasks, so retrying the same task names won't start
 * // WCM output .tgz archives aren't getting stored in GCS; only directory entries are stored
 * ^C out of flow.listen() should not print a bunch of clutter in ipython
+=======
 * the Simulation task failed trying to delete the output directory:
 ** Device or resource busy: '/wcEcoli/out/wf/wildtype_000000/000000/generation_000000/000000/simOut/'
+* are there rules programmers need to know about tasks deleting and writing into the output directories?
+* is it necessary to have running workers before flow.trigger() will work?
+* reevaluate the worker shutdown rules or at least lengthen the worker timeout. if you start 3 worker nodes for WCM, 2 will take the para and write-json tasks, then the parca task takes so long that the write-json worker gives up. Maybe workers should stick around while jobs are running, or maybe we just need to auto-start more of them on demand and make them start up faster.
 * return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
 * create intermediate directory entries in object store for nested keys
 * support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
@@ -24,12 +34,20 @@
 * make a Gaia client pip and add it to the wcEcoli requirements, or something
 * store timestamp, sisyphus id in logs
 * almost always filter logs for a specific job (= user + timestamp); sometimes for a specific task within a job
-* make Gaia and Sisyphus logs more informative, less cluttered, and easier to read
+* design Gaia and Sisyphus logs [both for journalctl and flow.listen()] to be more informative, less cluttered, and easier to read
+** clearly label the action for every log entry
+** clearly label the error messages
+** design the content of each message, e.g.
+**** sisyphus-status: {u'status': u'create', u'docker-id': u'8441243d6973', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5', u'docker-config': {u'mounts': {u'/tmp/sisyphus/outputs/data/jerry/20190701.110950/kb': u'/wcEcoli/out/wf/kb'}, u'image': u'gcr.io/allen-discovery-center-mcovert/jerry-wcm-code:latest', u'command': [u'sh', u'-c', u'python -u -m wholecell.fireworks.runTask parca \'{"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}\'']}}
+*** should be more like
+**** worker sisyphus-b: python -u -m wholecell.fireworks.runTask parca {"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}
+*** and
+**** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'}
+*** should be more like
+**** worker sisyphus-b: Fitting RNA synthesis probabilities.
 ** filter by job and optionally by task name or name pattern
 ** each job should have its own kafka topic(s) for logging, etc.
 ** perhaps flow.listen() should tune in at the start of the job or from where listen left off
-** clearly label the actions in the logs
-** clearly label the error messages
 ** remove internal debugging messages
 ** label each message for its purpose
 ** remove the u'text' clutter
