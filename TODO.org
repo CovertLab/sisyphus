@@ -1,30 +1,42 @@
-* sisyphus gets in bad state with rabbit when a task fails
-<<<<<<< HEAD
-* worker nodes need to be robust to task failures
-* the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
+* mysteries
+** sisyphus gets in bad state with rabbit when a task fails
+** it seems that one has to launch the workers, then wait for them to be ready, and only then trigger the workflow, otherwise trigger() doesn't start it
+** a parca task never got picked up by a worker
+** the Simulation task failed trying to delete the output directory:
+*** Device or resource busy: '/wcEcoli/out/wf/wildtype_000000/000000/generation_000000/000000/simOut/'
+** why do the worker VMs print "*** System restart required ***" when you ssh in?
+* questions / considerations
+** are there rules programmers need to know about tasks deleting and writing into the output directories?
+** is it necessary to have running workers before flow.trigger() will work?
+** probably need worker nodes with more RAM and disk space; maybe configurable
+** reevaluate the worker shutdown rules or at least lengthen the worker timeout. if you start 3 worker nodes for WCM, 2 will take the para and write-json tasks, then the parca task takes so long that the write-json worker gives up. Maybe workers should stick around while jobs are running, or maybe we just need to auto-start more of them on demand and make them start up faster.
+*** Yeah, it looks like we will ultimately need some kind of automatic launching, probably mediated by Gaia.
+** worker nodes need to be robust to task failures
+** the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
 =======
-* it seems that one has to launch the workers, then wait for them to be ready, and only then trigger the workflow, otherwise trigger() doesn't start it
-* the namespace should be independent of the bucket name
-* a parca task never got picked up by a worker
-* ^C out of flow.listen() should not print a bunch of clutter in ipython
-* the Simulation task failed trying to delete the output directory:
-** Device or resource busy: '/wcEcoli/out/wf/wildtype_000000/000000/generation_000000/000000/simOut/'
-* are there rules programmers need to know about tasks deleting and writing into the output directories?
-* is it necessary to have running workers before flow.trigger() will work?
-* reevaluate the worker shutdown rules or at least lengthen the worker timeout. if you start 3 worker nodes for WCM, 2 will take the para and write-json tasks, then the parca task takes so long that the write-json worker gives up. Maybe workers should stick around while jobs are running, or maybe we just need to auto-start more of them on demand and make them start up faster.
-* return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
-* create intermediate directory entries in object store for nested keys
-* support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
-* auto-create the output bucket?
-* store archive with .tgz suffix
-* need more error detection & reporting
-* probably need worker nodes with more RAM and disk space; maybe configurable
-* clear output directories between task runs
-* put commands in namespace
-* make a Gaia client pip and add it to the wcEcoli requirements, or something
-* store timestamp, sisyphus id in logs
-* almost always filter logs for a specific job (= user + timestamp); sometimes for a specific task within a job
-* design Gaia and Sisyphus logs [both for journalctl and flow.listen()] to be more informative, less cluttered, and easier to read
+** auto-launch worker nodes
+** store archive with .tgz suffix
+** rename 'key' to 'name'? or to '_name' and use sorted key printouts (e.g. via pprint) so the _name shows up first (which is where you need it)
+** do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
+** compare cloud shell to a gateway GCE instance
+** use a docker image version tag? how to feed it to the workflow builder?
+* sisyphus
+** create intermediate directory entries in object store for nested keys
+** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
+** auto-create the output bucket?
+** clear output directories between task runs
+** ensure that running a Command always begins without previous output files even if it reuses an open docker container
+* gaia
+** the namespace should be independent of the bucket name
+** put commands in namespace
+** make a Gaia client pip and add it to the wcEcoli requirements, or something
+** clean up each workflow job when done
+** replace any yaml.load() calls with yaml.safe_load()
+* logs
+** ^C out of flow.listen() should not print a bunch of clutter in ipython
+** store timestamp, sisyphus id in logs
+** almost always filter logs for a specific job (= user + timestamp); sometimes for a specific task within a job
+** design Gaia and Sisyphus logs [both for journalctl and flow.listen()] to be more informative, less cluttered, and easier to read
 ** clearly label the action for every log entry
 ** clearly label the error messages
 ** design the content of each message, e.g.
@@ -45,35 +57,31 @@
 ** streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
 ** ideally, make a single log entry for a stack traceback
 ** support stackdriver logging and filtering?
-* write a step-by-step how-to document for lab members
-** setting the "sisyphus" service account when configuring the GCE instance works, which obviates all the activate-service-account steps
-* speed up the workflow
+* errors
+** return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
+** need more error detection & reporting
+** test what happens when things go wrong. does it emit helpful error messages? can it do self-repair?
+* optimization
 ** how come it takes (at least sometimes) many minutes for workers to start picking up tasks?
 ** tasks run very slowly. do we need VMs with faster CPUs? more RAM? more cores? GPUs? larger disk?
 ** the log output comes out in batches of lines with many minutes between them
+** optimization: reuse a running docker container when the previous task requested the same image
+** optimization?: a separate set of nodes for each job
 * documentation
 ** document all the GCE VM setup factors: machine type? boot disk size? OS? Identity and API access? additional access scopes? label e.g. `role=home-base`? startup script? metadata, e.g. configuration for accessing the other servers?
-* clarification
-** rename 'key' to 'name'? or to '_name' and use sorted key printouts (e.g. via pprint) so the _name shows up first (which is where you need it)
-* ensure that running a Command always begins without previous output files even if it reuses an open docker container
-* unit tests
-* test what happens when things go wrong. does it emit helpful error messages? can it do self-repair?
-* use a docker image version tag? how to feed it to the workflow builder?
-* auto-launch worker nodes
-* ability to post a workflow directly from your desktop?
-* tools to simplify and speed up the dev cycle
-* implement nightly builds and PR builds
-* need DNS names within the cloud rather than hardwired IP addresses
-* clean up each workflow job when done
-* replace any yaml.load() calls with yaml.safe_load()
-* compare cloud shell to a gateway GCE instance
-* optimization: reuse a running docker container when the previous task requested the same image
-* why do the worker VMs print "*** System restart required ***" when you ssh in?
-* remote uploading to Gaia
-* remote log monitoring
-* remove webserver state viewing
-* optimization?: a separate set of nodes for each job
-* do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
+** write a step-by-step how-to document for lab members
+*** setting the "sisyphus" service account when configuring the GCE instance works, which obviates all the activate-service-account steps
+* features
+** unit tests
+** ability to post a workflow directly from your desktop?
+** tools to simplify and speed up the dev cycle
+** implement nightly builds and PR builds
+** need DNS names within the cloud rather than hardwired IP addresses
+** remote uploading to Gaia
+** remote log monitoring
+** remove webserver state viewing
+
+
 
 
 
