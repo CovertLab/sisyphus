@@ -9,12 +9,6 @@ otherwise trigger() doesn't start it
 * the namespace should be independent of the bucket name
 * a parca task never got picked up by a worker
 <<<<<<< HEAD
-* // Sisyphus created empty directories rather than storing archive files for WCM task outputs e.g. sisyphus/data/jerry/20190628.204402/kb/
-* // Sisyphus created directories for failed tasks e.g. sisyphus/data/jerry/20190628.204402/plotOut/
-* // pass an array of CLI tokens to Docker so the client doesn't have to do complex shell quoting (jerry put quoting into the WCM workflow as a temporary workaround) (maybe drop the unused && and > features)
-* // flow.trigger('sisyphus') gave a json error
-* // Sisyphus wrote outputs to GCS after some failed tasks, so retrying the same task names won't start
-* // WCM output .tgz archives aren't getting stored in GCS; only directory entries are stored
 * ^C out of flow.listen() should not print a bunch of clutter in ipython
 =======
 * the Simulation task failed trying to delete the output directory:
@@ -84,3 +78,15 @@ otherwise trigger() doesn't start it
 * remove webserver state viewing
 * optimization?: a separate set of nodes for each job
 * do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
+
+
+
+
+
+* DONE
+** Sisyphus created empty directories rather than storing archive files for WCM task outputs e.g. sisyphus/data/jerry/20190628.204402/kb/
+** Sisyphus created directories for failed tasks e.g. sisyphus/data/jerry/20190628.204402/plotOut/
+** pass an array of CLI tokens to Docker so the client doesn't have to do complex shell quoting (jerry put quoting into the WCM workflow as a temporary workaround) (maybe drop the unused && and > features)
+** flow.trigger('sisyphus') gave a json error
+** Sisyphus wrote outputs to GCS after some failed tasks, so retrying the same task names won't start
+** WCM output .tgz archives aren't getting stored in GCS; only directory entries are stored
