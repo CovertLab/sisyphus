@@ -21,6 +21,7 @@
 ** use a docker image version tag? how to feed it to the workflow builder?
 * sisyphus
 ** create intermediate directory entries in object store for nested keys
+*** This seems to happen already? At least, when I upload something to a nested dir I can still access from the web browser.
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 ** clear output directories between task runs
@@ -39,13 +40,13 @@
 ** clearly label the action for every log entry
 ** clearly label the error messages
 ** design the content of each message, e.g.
-**** sisyphus-status: {u'status': u'create', u'docker-id': u'8441243d6973', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5', u'docker-config': {u'mounts': {u'/tmp/sisyphus/outputs/data/jerry/20190701.110950/kb': u'/wcEcoli/out/wf/kb'}, u'image': u'gcr.io/allen-discovery-center-mcovert/jerry-wcm-code:latest', u'command': [u'sh', u'-c', u'python -u -m wholecell.fireworks.runTask parca \'{"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}\'']}}
-*** should be more like
-**** worker sisyphus-b: python -u -m wholecell.fireworks.runTask parca {"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}
-*** and
-**** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'}
-*** should be more like
-**** worker sisyphus-b: Fitting RNA synthesis probabilities.
+*** sisyphus-status: {u'status': u'create', u'docker-id': u'8441243d6973', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5', u'docker-config': {u'mounts': {u'/tmp/sisyphus/outputs/data/jerry/20190701.110950/kb': u'/wcEcoli/out/wf/kb'}, u'image': u'gcr.io/allen-discovery-center-mcovert/jerry-wcm-code:latest', u'command': [u'sh', u'-c', u'python -u -m wholecell.fireworks.runTask parca \'{"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}\'']}}
+**** should be more like
+*** worker sisyphus-b: python -u -m wholecell.fireworks.runTask parca {"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}
+**** and
+*** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'}
+**** should be more like
+*** worker sisyphus-b: Fitting RNA synthesis probabilities.
 ** filter by job and optionally by task name or name pattern
 ** each job should have its own kafka topic(s) for logging, etc.
 ** perhaps flow.listen() should tune in at the start of the job or from where listen left off
@@ -79,13 +80,6 @@
 ** remote uploading to Gaia
 ** remote log monitoring
 ** remove webserver state viewing
-
-
-
-
-
-
-
 * DONE
 ** Sisyphus created empty directories rather than storing archive files for WCM task outputs e.g. sisyphus/data/jerry/20190628.204402/kb/
 ** Sisyphus created directories for failed tasks e.g. sisyphus/data/jerry/20190628.204402/plotOut/
