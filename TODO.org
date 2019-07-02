@@ -24,8 +24,6 @@
 *** This seems to happen already? At least, when I upload something to a nested dir I can still access from the web browser.
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
-** clear output directories between task runs
-** ensure that running a Command always begins without previous output files even if it reuses an open docker container
 * gaia
 ** the namespace should be independent of the bucket name
 ** put commands in namespace
@@ -87,3 +85,5 @@
 ** flow.trigger('sisyphus') gave a json error
 ** Sisyphus wrote outputs to GCS after some failed tasks, so retrying the same task names won't start
 ** WCM output .tgz archives aren't getting stored in GCS; only directory entries are stored
+** clear output directories between task runs
+** ensure that running a Command always begins without previous output files even if it reuses an open docker container
