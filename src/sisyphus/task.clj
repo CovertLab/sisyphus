@@ -147,7 +147,6 @@
                     :mounts mounts
                     :command commands}
 
-            _ (println "creating docker container from" config)
             id (docker/create! docker config)
             lines (atom [])]
 
@@ -161,15 +160,21 @@
           (swap! lines conj line)
           (log! kafka task "log" {:line line}))
 
-        (status! kafka task "container" {:docker-id id :status (.toString (docker/info docker id))})
+        (status!
+         kafka task "container"
+         {:docker-id id
+          :status (.toString (docker/info docker id))})
 
         (let [code (docker/exit-code (docker/info docker id))]
           (status! kafka task "exit" {:docker-id id :code code})
+
           (if (> code 0)
             (status!
              kafka task "error"
              {:event "process-error"
+              :code code
               :log @lines})
+
             (doseq [output outputs]
               (log! kafka task "upload" {:path output})
               (push-output! storage output)
@@ -184,11 +189,12 @@
         (status!
          kafka task "complete"
          {:event "process-complete"})))
+
     (catch Exception e
       (let [message (.getMessage e)
             trace (map #(.toString %) (.getStackTrace e))]
         (status!
          kafka task "error"
-         {:event "container-error"
+         {:event "task-error"
           :message message
           :trace trace})))))

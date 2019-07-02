@@ -100,15 +100,20 @@
 (defn sisyphus-handle-rabbit
   "Handle an incoming task message by performing the task it represents."
   [state channel metadata ^bytes payload]
-  (let [raw (String. payload "UTF-8")
-        task (json/parse-string raw true)]
-    (println "performing task" task)
-    (do
-      (swap! (:state state) run-state! task)
-      (task/perform-task! state task)
-      (println "task complete!" task)
-      (langohr/ack channel (:delivery-tag metadata))
-      (swap! (:state state) reset-state! (:config state)))))
+  (try
+    (let [raw (String. payload "UTF-8")
+          task (json/parse-string raw true)]
+      (println "performing task" task)
+      (do
+        (swap! (:state state) run-state! task)
+        (task/perform-task! state task)
+        (println "task complete!" task)
+        (langohr/ack channel (:delivery-tag metadata))
+        (swap! (:state state) reset-state! (:config state))))
+    (catch Exception e
+      (println "ERROR in rabbit task")
+      (println (.toString e))
+      (.printStackTrace e))))
 
 (defn connect!
   [config]
