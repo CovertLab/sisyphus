@@ -14,12 +14,14 @@
 (defn delete-tree!
   "Extremely dangerous function"
   [paths]
-  (when-let [file (first paths)]
-    (if-let [subpaths (seq (.listFiles (io/file file)))]
-      (recur (concat subpaths paths))
-      (do
-        (io/delete-file file)
-        (recur (rest paths))))))
+  (when-let [path (first paths)]
+    (let [file (io/file path)]
+      (if-let [subpaths (seq (.listFiles file))]
+        (recur (concat subpaths paths))
+        (do
+          (if (.exists file)
+            (io/delete-file path))
+          (recur (rest paths)))))))
 
 (defn connect-storage!
   "Connect to the cloud storage service given the options specified in the config map."
