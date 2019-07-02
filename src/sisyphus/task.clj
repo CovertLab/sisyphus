@@ -27,6 +27,7 @@
         archive (str local ".tar.gz")
         directory? (archive/directory-path? internal)
         intern (archive/trim-slash internal)]
+    (cloud/delete-tree! [(.getAbsolutePath input)])
     (if directory?
       (.mkdirs input)
       (let [base (io/file (.getParent input))]

@@ -11,6 +11,16 @@
 
 (def default-content-type "application/octet-stream")
 
+(defn delete-tree!
+  "Extremely dangerous function"
+  [paths]
+  (when-let [file (first paths)]
+    (if-let [subpaths (seq (.listFiles (io/file file)))]
+      (recur (concat subpaths paths))
+      (do
+        (io/delete-file file)
+        (recur (rest paths))))))
+
 (defn connect-storage!
   "Connect to the cloud storage service given the options specified in the config map."
   [config]
