@@ -34,6 +34,7 @@
 ** replace any yaml.load() calls with yaml.safe_load()
 * logs (for now, the logs are the UI)
 ** log a message when a workflow stops running and indicate whether all tasks completed successfully
+** store a persistant log of high level info plus error messages
 ** ^C out of flow.listen() should not print a bunch of clutter in ipython
 ** store timestamp, sisyphus id in logs
 ** almost always filter logs for a specific job (= user + timestamp)
