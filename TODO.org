@@ -2,9 +2,9 @@
 ** sisyphus gets in bad state with rabbit when a task fails
 ** it seems that one has to launch the workers, then wait for them to be ready, and only then trigger the workflow, otherwise trigger() doesn't start it
 ** a parca task never got picked up by a worker
+** adding workers made everything stop running: with 3 WCM workers, one of them waits and one runs the write-metadata task then times out while the third runs parca. later, I stopped listen(), started 3 more workers, then started listen() again, then it got very stuck. listen() printed nothing. the gaia log only printed Kafka messages about partitions. listen ^C printed the usual stacktrace stuff but wouldn't quit. no ^C response. ^D printed "Do you really want to exit ([y]/n)?" but wouldn't exit. then ^C finally exited.
 ** the Simulation task failed trying to delete the output directory:
 *** Device or resource busy: '/wcEcoli/out/wf/wildtype_000000/000000/generation_000000/000000/simOut/'
-** why do the worker VMs print "*** System restart required ***" when you ssh in?
 * questions / considerations
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** is it necessary to have running workers before flow.trigger() will work?
@@ -94,3 +94,4 @@
 ** ensure that running a Command always begins without previous output files even if it reuses an open docker container
 ** make a Gaia client pip and add it to the wcEcoli requirements, or something
 ** the sisyphus VM needs more disk space --> now 200GB, 2 CPUs, 7.5 GB RAM
+** why do the worker VMs print "*** System restart required ***" when you ssh in? --> the VM image needed rebooting to install updates
