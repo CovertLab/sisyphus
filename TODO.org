@@ -22,11 +22,9 @@
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
+** the namespace should be independent of the bucket name
 ** standardize gaia API
 ** is it faster to launch a worker VM from a snapshot or an instance template than an image? easier to resize?
-** document how to create the gaia and sisyphus VM images
-** document how to restart and monitor the gaia and sisyphus servers
-** the namespace should be independent of the bucket name
 ** put commands in namespace
 ** clean up each workflow job when done
 ** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
@@ -75,6 +73,8 @@
 ** document all the GCE VM setup factors: machine type? boot disk size? OS? Identity and API access? additional access scopes? label e.g. `role=home-base`? startup script? metadata, e.g. configuration for accessing the other servers?
 ** write a step-by-step how-to document for lab members
 *** setting the "sisyphus" service account when configuring the GCE instance works, which obviates all the activate-service-account steps
+** document how to create the gaia and sisyphus VM images
+** document how to restart and monitor the gaia and sisyphus servers
 * features
 ** unit tests
 ** ability to post a workflow directly from your desktop
