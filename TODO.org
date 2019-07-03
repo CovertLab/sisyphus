@@ -27,7 +27,6 @@
 * gaia
 ** the namespace should be independent of the bucket name
 ** put commands in namespace
-** make a Gaia client pip and add it to the wcEcoli requirements, or something
 ** clean up each workflow job when done
 ** replace any yaml.load() calls with yaml.safe_load()
 * logs
@@ -87,3 +86,4 @@
 ** WCM output .tgz archives aren't getting stored in GCS; only directory entries are stored
 ** clear output directories between task runs
 ** ensure that running a Command always begins without previous output files even if it reuses an open docker container
+** make a Gaia client pip and add it to the wcEcoli requirements, or something

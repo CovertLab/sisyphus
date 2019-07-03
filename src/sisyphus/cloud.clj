@@ -5,6 +5,7 @@
    [java.io File FileInputStream]
    [com.google.cloud.storage
     Storage StorageOptions
+    Storage$BlobListOption
     Storage$BlobWriteOption
     Bucket BucketInfo
     Blob BlobId BlobInfo]))
@@ -59,7 +60,57 @@
   "Download from the cloud storage bucket and key to the provided path."
   [storage bucket key path]
   (let [blob-id (BlobId/of bucket key)
-        blob (.get storage blob-id)]
+        blob (.get storage blob-id)
+        file (io/file path)
+        base (io/file (.getParent file))]
+    (.mkdirs base)
     (if blob
       (.downloadTo blob (get-path path))
       (println "No blob with the key" (.toString blob-id)))))
+
+(defn find-subpath
+  [path prefix]
+  (let [subpath (.substring path (count prefix))]
+    (if (= \/ (first subpath))
+      (.substring subpath 1)
+      subpath)))
+
+(defn join-path
+  [elements]
+  (.getPath (apply io/file elements)))
+
+(defn upload-tree!
+  [storage bucket key path]
+  (doseq [file (file-seq (io/file path))]
+    (if (.isFile file)
+      (let [fullpath (.getAbsolutePath file)
+            subpath (find-subpath fullpath path)
+            subkey (join-path [key subpath])]
+        (println "uploading" fullpath "to" (str bucket ":" subkey))
+        (upload! storage bucket subkey fullpath)))))
+
+(defn directory-options
+  [directory]
+  (into-array
+   Storage$BlobListOption
+   [(Storage$BlobListOption/prefix directory)]))
+
+(defn list-directory
+  ([storage bucket directory]
+   (list-directory storage bucket directory (fn [bucket key] key)))
+  ([storage bucket directory keyfn]
+   (let [options (directory-options directory)
+         blobs (.list storage bucket options)]
+     (map
+      (comp
+       (partial keyfn bucket)
+       #(.getName %))
+      (.getValues blobs)))))
+
+(defn download-tree!
+  [storage bucket key path]
+  (let [remote (list-directory storage bucket key)]
+    (doseq [remote-key remote]
+      (let [local-path (join-path [path remote-key])]
+        (println "downloading from bucket" bucket "object" remote-key "to" local-path)
+        (download! storage bucket remote-key local-path)))))
