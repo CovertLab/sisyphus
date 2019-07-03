@@ -20,12 +20,14 @@
 ** compare cloud shell to a gateway GCE instance
 ** use a docker image version tag? how to feed it to the workflow builder?
 * sisyphus
-* >>> the VM needs more disk space (Could not setup log file in /home/sisyphus/.config/gcloud/logs, (OSError: [Errno 28] No space left on device: '/home/sisyphus/.config/gcloud/logs/2019.07.03'))
 ** create intermediate directory entries in object store for nested keys
 *** This seems to happen already? At least, when I upload something to a nested dir I can still access from the web browser.
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
+** the sisyphus VM needs more disk space (Could not setup log file in /home/sisyphus/.config/gcloud/logs, (OSError: [Errno 28] No space left on device: '/home/sisyphus/.config/gcloud/logs/2019.07.03'))
+** document how to create the gaia and sisyphus VM images
+** document how to restart and monitor the gaia and sisyphus servers
 ** the namespace should be independent of the bucket name
 ** put commands in namespace
 ** make a Gaia client pip and add it to the wcEcoli requirements, or something
