@@ -25,14 +25,19 @@
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
+** the sisyphus VM needs more disk space (Could not setup log file in /home/sisyphus/.config/gcloud/logs, (OSError: [Errno 28] No space left on device: '/home/sisyphus/.config/gcloud/logs/2019.07.03'))
+** document how to create the gaia and sisyphus VM images
+** document how to restart and monitor the gaia and sisyphus servers
 ** the namespace should be independent of the bucket name
 ** put commands in namespace
 ** clean up each workflow job when done
 ** replace any yaml.load() calls with yaml.safe_load()
-* logs
+* logs (for now, the logs are the UI)
+** log a message when a workflow stops running and indicate whether all tasks completed successfully
 ** ^C out of flow.listen() should not print a bunch of clutter in ipython
 ** store timestamp, sisyphus id in logs
-** almost always filter logs for a specific job (= user + timestamp); sometimes for a specific task within a job
+** almost always filter logs for a specific job (= user + timestamp)
+** sometimes filter logs for a specific task within a job
 ** design Gaia and Sisyphus logs [both for journalctl and flow.listen()] to be more informative, less cluttered, and easier to read
 ** clearly label the action for every log entry
 ** clearly label the error messages
@@ -53,6 +58,7 @@
 ** adjustable logging levels
 ** streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
 ** ideally, make a single log entry for a stack traceback
+** adjust Kafka if possible to deliver log entries in smaller batches
 ** support stackdriver logging and filtering?
 * errors
 ** return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
