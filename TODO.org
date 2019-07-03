@@ -20,17 +20,17 @@
 ** compare cloud shell to a gateway GCE instance
 ** use a docker image version tag? how to feed it to the workflow builder?
 * sisyphus
-** create intermediate directory entries in object store for nested keys
-*** This seems to happen already? At least, when I upload something to a nested dir I can still access from the web browser.
+** create intermediate directory entries in object store for nested keys (it is still needed for gcsfuse; the web console browser doesn't need it)
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
-** the sisyphus VM needs more disk space (Could not setup log file in /home/sisyphus/.config/gcloud/logs, (OSError: [Errno 28] No space left on device: '/home/sisyphus/.config/gcloud/logs/2019.07.03'))
+** is it faster to launch a worker VM from a snapshot or an instance template than an image? easier to resize?
 ** document how to create the gaia and sisyphus VM images
 ** document how to restart and monitor the gaia and sisyphus servers
 ** the namespace should be independent of the bucket name
 ** put commands in namespace
 ** clean up each workflow job when done
+** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
 ** replace any yaml.load() calls with yaml.safe_load()
 * logs (for now, the logs are the UI)
 ** log a message when a workflow stops running and indicate whether all tasks completed successfully
@@ -93,3 +93,4 @@
 ** clear output directories between task runs
 ** ensure that running a Command always begins without previous output files even if it reuses an open docker container
 ** make a Gaia client pip and add it to the wcEcoli requirements, or something
+** the sisyphus VM needs more disk space --> now 200GB, 2 CPUs, 7.5 GB RAM
