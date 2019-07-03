@@ -77,7 +77,8 @@
 *** setting the "sisyphus" service account when configuring the GCE instance works, which obviates all the activate-service-account steps
 * features
 ** unit tests
-** ability to post a workflow directly from your desktop?
+** ability to post a workflow directly from your desktop
+** web UI: show a graph of your current wf's steps, click on a step to see its inputs, outputs, log, and which inputs are available; show the workers and what job/task each one is running
 ** tools to simplify and speed up the dev cycle
 ** implement nightly builds and PR builds
 ** need DNS names within the cloud rather than hardwired IP addresses
