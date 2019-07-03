@@ -16,8 +16,9 @@
 
 (defn split-key
   [key]
-  (let [[prefix & parts] (string/split (full-name key) #":")]
-    [prefix (string/join ":" parts)]))
+  (let [full-key (full-name key)
+        colon (.indexOf full-key ":")]
+    [(.substring full-key 0 colon) (.substring full-key (inc colon))]))
 
 (defn find-local!
   [root [remote internal]]
@@ -107,6 +108,7 @@
     (get-in kafka [:config topic])
     (merge
      {:id (:id task)
+      :space (:space task)
       :status status}
      message))))
 

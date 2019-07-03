@@ -12,17 +12,9 @@
 
 (def default-content-type "application/octet-stream")
 
-(defn delete-tree!
-  "Extremely dangerous function"
-  [paths]
-  (when-let [path (first paths)]
-    (let [file (io/file path)]
-      (if-let [subpaths (seq (.listFiles file))]
-        (recur (concat subpaths paths))
-        (do
-          (if (.exists file)
-            (io/delete-file path))
-          (recur (rest paths)))))))
+(defn join-path
+  [elements]
+  (.getPath (apply io/file elements)))
 
 (defn connect-storage!
   "Connect to the cloud storage service given the options specified in the config map."
@@ -35,6 +27,18 @@
    filesystem path."
   [path]
   (.toPath (File. path)))
+
+(defn delete-tree!
+  "Extremely dangerous function"
+  [paths]
+  (when-let [path (first paths)]
+    (let [file (io/file path)]
+      (if-let [subpaths (seq (.listFiles file))]
+        (recur (concat subpaths paths))
+        (do
+          (if (.exists file)
+            (io/delete-file path))
+          (recur (rest paths)))))))
 
 (defn upload!
   "Upload the file at the given local filesystem path to the cloud storage bucket and key."
@@ -56,6 +60,23 @@
        (println "failed to upload" path "to" key)
        (.printStackTrace e)))))
 
+(defn find-subpath
+  [path prefix]
+  (let [subpath (.substring path (count prefix))]
+    (if (= \/ (first subpath))
+      (.substring subpath 1)
+      subpath)))
+
+(defn upload-tree!
+  [storage bucket key path]
+  (doseq [file (file-seq (io/file path))]
+    (if (.isFile file)
+      (let [fullpath (.getAbsolutePath file)
+            subpath (find-subpath fullpath path)
+            subkey (join-path [key subpath])]
+        (println "uploading" fullpath "to" (str bucket ":" subkey))
+        (upload! storage bucket subkey fullpath)))))
+
 (defn download!
   "Download from the cloud storage bucket and key to the provided path."
   [storage bucket key path]
@@ -68,27 +89,6 @@
       (.downloadTo blob (get-path path))
       (println "No blob with the key" (.toString blob-id)))))
 
-(defn find-subpath
-  [path prefix]
-  (let [subpath (.substring path (count prefix))]
-    (if (= \/ (first subpath))
-      (.substring subpath 1)
-      subpath)))
-
-(defn join-path
-  [elements]
-  (.getPath (apply io/file elements)))
-
-(defn upload-tree!
-  [storage bucket key path]
-  (doseq [file (file-seq (io/file path))]
-    (if (.isFile file)
-      (let [fullpath (.getAbsolutePath file)
-            subpath (find-subpath fullpath path)
-            subkey (join-path [key subpath])]
-        (println "uploading" fullpath "to" (str bucket ":" subkey))
-        (upload! storage bucket subkey fullpath)))))
-
 (defn directory-options
   [directory]
   (into-array
@@ -96,21 +96,18 @@
    [(Storage$BlobListOption/prefix directory)]))
 
 (defn list-directory
-  ([storage bucket directory]
-   (list-directory storage bucket directory (fn [bucket key] key)))
-  ([storage bucket directory keyfn]
-   (let [options (directory-options directory)
-         blobs (.list storage bucket options)]
-     (map
-      (comp
-       (partial keyfn bucket)
-       #(.getName %))
-      (.getValues blobs)))))
+  [storage bucket directory]
+  (let [options (directory-options directory)
+        blobs (.list storage bucket options)]
+    (map
+     #(.getName %)
+     (.getValues blobs))))
 
 (defn download-tree!
   [storage bucket key path]
-  (let [remote (list-directory storage bucket key)]
-    (doseq [remote-key remote]
+  (let [remote-keys (list-directory storage bucket key)]
+    (doseq [remote-key remote-keys]
       (let [local-path (join-path [path remote-key])]
         (println "downloading from bucket" bucket "object" remote-key "to" local-path)
         (download! storage bucket remote-key local-path)))))
+
