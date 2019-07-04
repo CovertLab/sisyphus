@@ -8,12 +8,12 @@
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** is it necessary to have running workers before flow.trigger() will work?
 ** probably need worker nodes with more RAM and disk space; maybe configurable
-** reevaluate the worker shutdown rules or at least lengthen the worker timeout. if you start 3 worker nodes for WCM, 2 will take the para and write-json tasks, then the parca task takes so long that the write-json worker gives up. Maybe workers should stick around while jobs are running, or maybe we just need to auto-start more of them on demand and make them start up faster.
+** reevaluate the worker shutdown rules or at least lengthen the worker timeout. (if you start 3 worker nodes for WCM, 2 will take the para and write-json tasks, then the parca task takes so long that the write-json worker gives up.) Maybe workers should stick around while runs (or their run) are running, or maybe we just need to auto-start more of them on demand and make them start up faster.
 *** Yeah, it looks like we will ultimately need some kind of automatic launching, probably mediated by Gaia.
 ** worker nodes need to be robust to task failures
 ** the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
 ** auto-launch worker nodes
-** store archive with .tgz suffix
+** store archive with .tgz suffix *OR* store the directory of files instead of an archive
 ** rename 'key' to 'name'? or to '_name' and use sorted key printouts (e.g. via pprint) so the _name shows up first (which is where you need it)
 ** do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
 ** compare cloud shell to a gateway GCE instance
@@ -26,18 +26,18 @@
 ** the namespace should be independent of the bucket name
 ** standardize gaia API
 ** put commands in namespace
-** clean up each workflow job when done
+** clean up each workflow run when done
 ** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
 ** replace any yaml.load() calls with yaml.safe_load()
 ** provide some means to find out what keys the workflow is waiting on (for debugging)
-** is it faster to launch a worker VM from a snapshot or an instance template than an image? easier to resize?
+** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 * logs (for now, the logs are the UI)
 ** log a message when a workflow stops running and indicate whether all tasks completed successfully
 ** store a persistant log of high level info plus error messages
 ** ^C out of flow.listen() should not print a bunch of clutter in ipython
 ** store timestamp, sisyphus id in logs
-** almost always filter logs for a specific job (= user + timestamp)
-** sometimes filter logs for a specific task within a job
+** almost always filter logs for a specific run (workflow instance)
+** sometimes filter logs for a specific task within a run
 ** design Gaia and Sisyphus logs [both for journalctl and flow.listen()] to be more informative, less cluttered, and easier to read
 ** clearly label the action for every log entry
 ** clearly label the error messages
@@ -49,9 +49,9 @@
 *** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'}
 **** should be more like
 *** worker sisyphus-b: Fitting RNA synthesis probabilities.
-** filter by job and optionally by task name or name pattern
-** each job should have its own kafka topic(s) for logging, etc.
-** perhaps flow.listen() should tune in at the start of the job or from where listen left off
+** filter by run and optionally by task name or name pattern
+** each run should have its own kafka topic(s) for logging, etc.
+** perhaps flow.listen() should tune in at the start of the run or from where listen left off
 ** remove internal debugging messages
 ** label each message for its purpose
 ** remove the u'text' clutter
@@ -69,7 +69,7 @@
 ** tasks run very slowly. do we need VMs with faster CPUs? more RAM? more cores? GPUs? larger disk?
 ** the log output comes out in batches of lines with many minutes between them
 ** optimization: reuse a running docker container when the previous task requested the same image
-** optimization?: a separate set of nodes for each job
+** optimization?: a separate set of nodes for each run
 * documentation
 ** document all the GCE VM setup factors: machine type? boot disk size? OS? Identity and API access? additional access scopes? label e.g. `role=home-base`? startup script? metadata, e.g. configuration for accessing the other servers?
 ** write a step-by-step how-to document for lab members
@@ -79,7 +79,7 @@
 * features
 ** unit tests
 ** ability to post a workflow directly from your desktop
-** web UI: show a graph of your current wf's steps, click on a step to see its inputs, outputs, log, and which inputs are available; show the workers and what job/task each one is running
+** web UI: show a graph of your current workflow run's steps, click on a step to see its inputs, outputs, log, and which inputs are available; show the workers and what run/task each one is running
 ** tools to simplify and speed up the dev cycle
 ** implement nightly builds and PR builds
 ** need DNS names within the cloud rather than hardwired IP addresses
