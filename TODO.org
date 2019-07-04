@@ -4,6 +4,7 @@
 ** a parca task never got picked up by a worker
 ** adding workers made everything stop running: with 3 WCM workers, one of them waits and one runs the write-metadata task then times out while the third runs parca. later, I stopped listen(), started 3 more workers, then started listen() again, then it got very stuck. listen() printed nothing. the gaia log only printed Kafka messages about partitions. listen ^C printed the usual stacktrace stuff but wouldn't quit. no ^C response. ^D printed "Do you really want to exit ([y]/n)?" but wouldn't exit. then ^C finally exited.
 * questions / considerations
+** (jerry) is it straightforward to arrange secure access to the Gaia API over the internet?
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** is it necessary to have running workers before flow.trigger() will work?
 ** probably need worker nodes with more RAM and disk space; maybe configurable
@@ -24,12 +25,12 @@
 * gaia
 ** the namespace should be independent of the bucket name
 ** standardize gaia API
-** is it faster to launch a worker VM from a snapshot or an instance template than an image? easier to resize?
 ** put commands in namespace
 ** clean up each workflow job when done
 ** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
 ** replace any yaml.load() calls with yaml.safe_load()
 ** provide some means to find out what keys the workflow is waiting on (for debugging)
+** is it faster to launch a worker VM from a snapshot or an instance template than an image? easier to resize?
 * logs (for now, the logs are the UI)
 ** log a message when a workflow stops running and indicate whether all tasks completed successfully
 ** store a persistant log of high level info plus error messages
