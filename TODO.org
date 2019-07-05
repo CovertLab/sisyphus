@@ -4,20 +4,19 @@
 ** a parca task never got picked up by a worker
 ** adding workers made everything stop running: with 3 WCM workers, one of them waits and one runs the write-metadata task then times out while the third runs parca. later, I stopped listen(), started 3 more workers, then started listen() again, then it got very stuck. listen() printed nothing. the gaia log only printed Kafka messages about partitions. listen ^C printed the usual stacktrace stuff but wouldn't quit. no ^C response. ^D printed "Do you really want to exit ([y]/n)?" but wouldn't exit. then ^C finally exited.
 * questions / considerations
-** pick an easier way to tunnel to kafka than adding to /etc/hosts
+** pick an easier way to tunnel to kafka than adding to /etc/hosts (Cloud IAP? ifconfig alias? HOSTALIASES? dynamic port forwarding? VPN?)
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** is it necessary to have running workers before flow.trigger() will work?
-** probably need worker nodes with more RAM and disk space; maybe configurable
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. (if you start 3 worker nodes for WCM, 2 will take the para and write-json tasks, then the parca task takes so long that the write-json worker gives up.) Maybe workers should stick around while runs (or their run) are running, or maybe we just need to auto-start more of them on demand and make them start up faster.
-*** Yeah, it looks like we will ultimately need some kind of automatic launching, probably mediated by Gaia.
+*** auto-launch and shutdown workers, probably mediated by Gaia. Either accept a worker count from the workflow builder for speed and adjustability or react to the queue length to be more automatic.
 ** worker nodes need to be robust to task failures
 ** the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
-** auto-launch worker nodes
 ** store archive with .tgz suffix *OR* store the directory of files instead of an archive
-** rename 'key' to 'name'? or to '_name' and use sorted key printouts (e.g. via pprint) so the _name shows up first (which is where you need it)
-** do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
-** compare cloud shell to a gateway GCE instance
-** use a docker image version tag? how to feed it to the workflow builder?
+** rename 'key' to 'name'?
+** is the gateway machine obsolete now that the workflow builder can connect to gaia-base and zookeeper-prime?
+*** do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
+*** compare cloud shell to a gateway GCE instance
+** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
 ** create intermediate directory entries in object store for nested keys (it is still needed for gcsfuse; the web console browser doesn't need it)
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
@@ -29,10 +28,10 @@
 ** put commands in namespace
 ** clean up each workflow run when done
 ** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
-** replace any yaml.load() calls with yaml.safe_load()
 ** provide some means to find out what keys the workflow is waiting on (for debugging)
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 * logs (for now, the logs are the UI)
+** support stackdriver logging and filtering?
 ** log a message when a workflow stops running and indicate whether all tasks completed successfully
 ** store a persistant log of high level info plus error messages
 ** ^C out of flow.listen() should not print a bunch of clutter in ipython
@@ -56,11 +55,10 @@
 ** remove internal debugging messages
 ** label each message for its purpose
 ** remove the u'text' clutter
-** adjustable logging levels
+** logging message levels; adjustable log filtering level
 ** streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
 ** ideally, make a single log entry for a stack traceback
 ** adjust Kafka if possible to deliver log entries in smaller batches
-** support stackdriver logging and filtering?
 * errors
 ** return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
 ** need more error detection & reporting
@@ -79,14 +77,12 @@
 ** document how to restart and monitor the gaia and sisyphus servers
 * features
 ** unit tests
-** ability to post a workflow directly from your desktop
 ** web UI: show a graph of your current workflow run's steps, click on a step to see its inputs, outputs, log, and which inputs are available; show the workers and what run/task each one is running
 ** tools to simplify and speed up the dev cycle
 ** implement nightly builds and PR builds
 ** need DNS names within the cloud rather than hardwired IP addresses
-** remote uploading to Gaia
-** remote log monitoring
 ** remove webserver state viewing
+** create (and document how) a Compute Engine monitor chart for worker node CPU usage
 * DONE
 ** Sisyphus created empty directories rather than storing archive files for WCM task outputs e.g. sisyphus/data/jerry/20190628.204402/kb/
 ** Sisyphus created directories for failed tasks e.g. sisyphus/data/jerry/20190628.204402/plotOut/
@@ -103,3 +99,7 @@
 ** the Simulation task failed trying to delete the output directory:
 *** Device or resource busy: '/wcEcoli/out/wf/wildtype_000000/000000/generation_000000/000000/simOut/'
 ** arrange secure access to the Gaia API over the internet
+** probably need worker nodes with more RAM and disk space; maybe configurable
+** replace any yaml.load() calls with yaml.safe_load()
+** remote uploading to Gaia; ability to post a workflow directly from your desktop
+** remote log monitoring via flow.listen()
