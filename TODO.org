@@ -23,7 +23,7 @@
 ** auto-create the output bucket?
 * gaia
 ** the namespace should be independent of the bucket name
-** remove Gaia.launch(): There's no ../../script/launch-sisyphus.sh in the pip and the builder now does it differently
+** remove or update Gaia.launch(): There's no ../../script/launch-sisyphus.sh in the pip and the WCM builder now does it differently
 ** standardize gaia API
 ** put commands in namespace
 ** clean up each workflow run when done
