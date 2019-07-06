@@ -1,6 +1,6 @@
 * mysteries
 ** sisyphus gets in bad state with rabbit when a task fails
-** it seems that one has to launch the workers, then wait for them to be ready, and only then trigger the workflow, otherwise trigger() doesn't start it
+** Gaia.trigger() doesn't start the workflow unless workers are good and ready
 ** a parca task never got picked up by a worker
 ** adding workers made everything stop running: with 3 WCM workers, one of them waits and one runs the write-metadata task then times out while the third runs parca. later, I stopped listen(), started 3 more workers, then started listen() again, then it got very stuck. listen() printed nothing. the gaia log only printed Kafka messages about partitions. listen ^C printed the usual stacktrace stuff but wouldn't quit. no ^C response. ^D printed "Do you really want to exit ([y]/n)?" but wouldn't exit. then ^C finally exited.
 * questions / considerations
@@ -23,7 +23,7 @@
 ** auto-create the output bucket?
 * gaia
 ** the namespace should be independent of the bucket name
-** bug: flow.launch(): ../../script/launch-sisyphus.sh: No such file or directory
+** remove Gaia.launch(): There's no ../../script/launch-sisyphus.sh in the pip and the builder now does it differently
 ** standardize gaia API
 ** put commands in namespace
 ** clean up each workflow run when done
