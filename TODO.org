@@ -75,6 +75,7 @@
 *** setting the "sisyphus" service account when configuring the GCE instance works, which obviates all the activate-service-account steps
 ** document how to create the gaia and sisyphus VM images
 ** document how to restart and monitor the gaia and sisyphus servers
+** document how to make a Compute Engine monitor chart for worker node CPU usage: on GCP dashboard, add chart, Metric instance/cpu/utilization, Filter metric.labels.instance_name = starts_with("sisyphus") and maybe more metrics like instance/disk/read_bytes_count group by project_id aggregate by sum
 * features
 ** unit tests
 ** web UI: show a graph of your current workflow run's steps, click on a step to see its inputs, outputs, log, and which inputs are available; show the workers and what run/task each one is running
@@ -82,7 +83,6 @@
 ** implement nightly builds and PR builds
 ** need DNS names within the cloud rather than hardwired IP addresses
 ** remove webserver state viewing
-** create (and document how) a Compute Engine monitor chart for worker node CPU usage
 * DONE
 ** Sisyphus created empty directories rather than storing archive files for WCM task outputs e.g. sisyphus/data/jerry/20190628.204402/kb/
 ** Sisyphus created directories for failed tasks e.g. sisyphus/data/jerry/20190628.204402/plotOut/
