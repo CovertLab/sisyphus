@@ -51,17 +51,19 @@
 (defn pull-input!
   [storage {:keys [bucket key archive local directory?]}]
   (if directory?
-    (do
-      (cloud/download! storage bucket key archive)
-      (archive/unpack! archive local))
+    (cloud/download-tree! storage bucket key local)
+    ;; (do
+    ;;   (cloud/download! storage bucket key archive)
+    ;;   (archive/unpack! archive local))
     (cloud/download! storage bucket key local)))
 
 (defn push-output!
   [storage {:keys [local directory? archive bucket key]}]
   (if directory?
-    (do
-      (archive/pack! archive local)
-      (cloud/upload! storage bucket key archive))
+    (cloud/upload-tree! storage bucket key local)
+    ;; (do
+    ;;   (archive/pack! archive local)
+    ;;   (cloud/upload! storage bucket key archive))
     (cloud/upload! storage bucket key local)))
 
 (defn redirect-stdout

@@ -1,10 +1,12 @@
 (ns sisyphus.docker
   (:require
+   [clojure.string :as string]
    [clojure.java.io :as io]
    [byte-streams :as bytes]
    [clj-docker-client.core :as docker]
    [clj-docker-client.utils :as docker-utils])
   (:import
+   [java.nio.charset StandardCharsets]
    [com.spotify.docker.client
     LogMessage
     DockerClient
@@ -111,14 +113,27 @@
   [docker id]
   (.logs docker id (logs-streams)))
 
+(defn iteration->seq
+  [iteration]
+  (seq
+   (reify java.lang.Iterable 
+     (iterator [this] 
+       (reify java.util.Iterator
+         (hasNext [this] (.hasNext iteration))
+         (next [this] (.next iteration))
+         (remove [this] (.remove iteration)))))))
+
+(defn decode-bytes
+  [bytes]
+  (.toString
+   (.decode StandardCharsets/UTF_8 bytes)))
+
 (defn logs-seq
   "Convert a docker-client ^LogStream to a seq of lines."
   [logs]
-  (let [it (iterator-seq logs)
-        content (map #(.content ^LogMessage %) it)
-        stream (bytes/to-input-stream content)
-        reader (io/reader stream)]
-    (line-seq reader)))
+  (let [it (iteration->seq logs)
+        content (map #(decode-bytes (.content ^LogMessage %)) it)]
+    (mapcat #(string/split % #"\n") content)))
 
 (defn logs
   [docker id]

@@ -11,13 +11,14 @@
 *** auto-launch and shutdown workers, probably mediated by Gaia. Either accept a worker count from the workflow builder for speed and adjustability or react to the queue length to be more automatic. [Low priority since the WCM builder now does it.]
 ** (Ryan: validating) worker nodes need to be robust to task failures
 ** (Ryan: validating) the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
-** (Ryan: implementing) store archive with .tgz suffix *OR* store the directory of files instead of an archive
 ** (Ryan: investigating) rename 'key' to 'name'?
 ** is the gateway machine obsolete now that the workflow builder can connect to gaia-base and zookeeper-prime?
 *** do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
 *** compare cloud shell to a gateway GCE instance
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
+** (Ryan: implementing) store archive with .tgz suffix *OR* store the directory of files instead of an archive
+** (Ryan: investigating) have docker output files as the user who starts sisyphus
 ** create intermediate directory entries in object store for nested keys (it is still needed for gcsfuse; the web console browser doesn't need it)
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
