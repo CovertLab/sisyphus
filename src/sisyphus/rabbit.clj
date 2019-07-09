@@ -1,13 +1,13 @@
 (ns sisyphus.rabbit
   (:require
-   [taoensso.timbre :as log]
    [cheshire.core :as json]
    [langohr.core :as lcore]
    [langohr.channel :as lchannel]
    [langohr.exchange :as lexchange]
    [langohr.queue :as lqueue]
    [langohr.consumers :as lconsumers]
-   [langohr.basic :as lbasic]))
+   [langohr.basic :as lbasic]
+   [sisyphus.log :as log]))
 
 (def config-keys
   [:host :port :username :vhost :password])
@@ -81,12 +81,12 @@
 (defn -main
   [& args]
   (try
-    (println "rabbbbbbbbbbit")
+    (log/fine! "rabbbbbbbbbbit")
     (let [rabbit (connect! {})
           consumer (start-consumer! rabbit default-handle-message)
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]
                      (close! rabbit)
-                     (println "(disappears into hole)")))]
+                     (log/fine! "(disappears into hole)")))]
       (sun.misc.Signal/handle (sun.misc.Signal. "INT") signal)
       @(promise))))

@@ -18,6 +18,7 @@
 *** compare cloud shell to a gateway GCE instance
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
+** service account setup; see https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances : recommends creating a new service account (like "sisyphus") rather than using the Compute Engine default service account; giving it the https://www.googleapis.com/auth/cloud-platform scope; and configuring the instance to run as that service account. Needed for Stackdriver? Presumably we can configure all scopes this way without environment vars.
 ** create intermediate directory entries in object store for nested keys (it is still needed for gcsfuse; the web console browser doesn't need it)
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
@@ -31,8 +32,7 @@
 ** provide some means to find out what keys the workflow is waiting on (for debugging)
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 * logs (for now, the logs are the UI)
-** support stackdriver logging and filtering
-*** give the sisyphus service account permissions to write to logs
+** support stackdriver logging and filtering: sisyphus and gaia
 *** also stackdriver debugger, error reporting, load trace & profiler, dashboards
 ** log a message when a workflow stops running and indicate whether all tasks completed successfully
 ** store a persistant log of high level info plus error messages
@@ -59,7 +59,6 @@
 ** remove the u'text' clutter
 ** logging message levels; adjustable log filtering level
 ** streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
-** ideally, make a single log entry for a stack traceback
 ** adjust Kafka if possible to deliver log entries in smaller batches
 * errors
 ** return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
@@ -105,3 +104,5 @@
 ** replace any yaml.load() calls with yaml.safe_load()
 ** remote uploading to Gaia; ability to post a workflow directly from your desktop
 ** remote log monitoring via flow.listen()
+*** give the sisyphus service account permissions to write to logs
+** ideally, make a single log entry for a stack traceback

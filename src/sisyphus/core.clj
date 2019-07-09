@@ -4,11 +4,11 @@
    [clojure.string :as string]
    [clojure.java.shell :as sh]
    [cheshire.core :as json]
-   [taoensso.timbre :as log]
    [langohr.basic :as langohr]
    [clj-http.client :as http]
    [sisyphus.archive :as archive]
    [sisyphus.kafka :as kafka]
+   [sisyphus.log :as log]
    [sisyphus.cloud :as cloud]
    [sisyphus.docker :as docker]
    [sisyphus.task :as task]
@@ -31,8 +31,8 @@
   []
   (try
     (let [self (signature)]
-      (println self "terminating")
-      (println
+      (log/info! self "terminating")
+      (log/info!
        (sh/sh
         "/snap/bin/gcloud"
         "--quiet"
@@ -44,7 +44,7 @@
         "us-west1-b"))
       (System/exit 0))
     (catch Exception e
-      (.printStackTrace e))))
+      (log/exception! "terminating" e))))
 
 (defn timer
   [wait f]
@@ -103,17 +103,15 @@
   (try
     (let [raw (String. payload "UTF-8")
           task (json/parse-string raw true)]
-      (println "performing task" task)
+      (log/warn! "starting-task" task)
       (do
         (swap! (:state state) run-state! task)
         (task/perform-task! state task)
-        (println "task complete!" task)
+        (log/warn! "task-complete" task)
         (langohr/ack channel (:delivery-tag metadata))
         (swap! (:state state) reset-state! (:config state))))
     (catch Exception e
-      (println "ERROR in rabbit task")
-      (println (.toString e))
-      (.printStackTrace e))))
+      (log/exception! "rabbit-task" e))))
 
 (defn connect!
   [config]
@@ -160,7 +158,7 @@
 (defn -main
   [& args]
   (try
-    (println "sisyphus rises....")
+    (log/fine! "sisyphus rises....")
     (let [path "resources/config/sisyphus.clj"
           config (read-path path)
           state (start! config)]

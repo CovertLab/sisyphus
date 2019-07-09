@@ -3,7 +3,8 @@
    [clojure.java.io :as io]
    [byte-streams :as bytes]
    [clj-docker-client.core :as docker]
-   [clj-docker-client.utils :as docker-utils])
+   [clj-docker-client.utils :as docker-utils]
+   [sisyphus.log :as log])
   (:import
    [com.spotify.docker.client
     LogMessage
@@ -188,7 +189,7 @@
                 docker exec-id
                 (into-array DockerClient$ExecStartParameter []))
         state (.execInspect docker exec-id)]
-    (println state)
+    (log/info! "docker" state)
     (logs-seq output)))
 
 (defn run-container!
@@ -196,12 +197,12 @@
    container from the main thread."
   [docker options]
   (let [id (create! docker options)]
-    (println "docker container id:" id)
+    (log/info! "docker-container" id)
     (start! docker id)
     (future
       (let [logs (docker/logs docker id)]
         (doseq [line logs]
-          (println line))))
+          (log/warn! "docker-run" line))))
     (if (:detach options)
       id
       (docker/wait-container docker id))))
