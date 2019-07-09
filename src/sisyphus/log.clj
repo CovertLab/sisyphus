@@ -2,7 +2,7 @@
   (:import
     [java.util.logging Level Logger]))
 
-(def ^:dynamic *logger*
+(def ^{:dynamic true :tag Logger} *logger*
   "Set up the logger(s)."
   ; TODO(jerry): Pass maps directly to the Stackdriver API or use logger object
   ;   params? Support Stackdriver logging levels?
