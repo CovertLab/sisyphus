@@ -1,95 +1,41 @@
-(ns sisyphus.log)
+(ns sisyphus.log
+  (:import
+    [java.util.logging Level Logger]))
 
-;; This file is an experiment to create a minimal log level implementation. Not currently in use.
+(def ^{:dynamic true :tag Logger} *logger*
+  "Set up the loggers."
+  ; REQUIRES: project.clj to declare
+  ;   :jvm-opts ["-Djava.util.logging.config.file=resources/config/logging.properties"]
+  ; TODO(jerry): Pass maps directly to the Stackdriver API or use logger object
+  ;   params? Support Stackdriver logging levels?
+  ; TODO(jerry): Fetch the Logging.Handler and flush() before exiting?
+  (Logger/getLogger "sisyphus"))
 
-(def ^:dynamic *debug* false)
-(def ^:dynamic *trace* false)
-(def ^:dynamic *info* false)
-(def ^:dynamic *warn* false)
-(def ^:dynamic *error* false)
+(def fine Level/FINE)
+(def info Level/INFO)
+(def warn Level/WARNING)
+(def severe Level/SEVERE)
 
-(def log-levels
-  [[:debug #'*debug*]
-   [:trace #'*trace*]
-   [:info #'*info*]
-   [:warn #'*warn*]
-   [:error #'*error*]])
+(defn log!
+  [^Level level & x]
+  (.log *logger* level (str x)))
 
-(defn log-level
-  "Given a map of log level keys to vars and a level, return all level keys implied by this level."
-  [levels level]
-  (into {}
-   (map
-    (juxt last (constantly true))
-    (drop-while
-     (comp (partial not= level) first)
-     levels))))
-
-(defn debug
+(defn fine!
   [& x]
-  (when *debug*
-    (apply println x)))
+  (.fine *logger* (str x)))
 
-(defn trace
+(defn info!
   [& x]
-  (when *trace*
-    (apply println x)))
+  (.info *logger* (str x)))
 
-(defn info
+(defn warn!
   [& x]
-  (when *info*
-    (apply println x)))
+  (.warning *logger* (str x)))
 
-(defn warn
+(defn severe!
   [& x]
-  (when *warn*
-    (apply println x)))
+  (.severe *logger* (str x)))
 
-(defn error
-  [& x]
-  (when *error*
-    (apply println x)))
-
-
-;; (defmacro define-var
-;;   [key]
-;;   `(def ^:dynamic (symbol (name ~key)) false))
-
-;; (defmacro define-levels
-;;   [levels]
-;;   `(do
-;;      ~@(mapv
-;;         (fn [level]
-;;           `(def ^:dynamic ~(symbol (name level)) false))
-;;         levels)))
-
-;; (def log-levels
-;;   [:*debug*
-;;    :*trace*
-;;    :*info*
-;;    :*warn*
-;;    :*error*])
-
-;; (defmacro define-levels
-;;   [levels]
-;;   (mapv
-;;    (fn [level]
-;;      `(def ^:dynamic (symbol (name @level)) false)`
-;;      [level ((comp resolve symbol name) level)])
-;;    levels))
-
-;; (defn app
-;;   [config]
-;;   (when *info*
-;;     (println "info level engaged"))
-;;   (when *error*
-;;     (println "error level engaged")))
-
-;; (defn top-level
-;;   [config log-levels]
-;;   (let [level (get-in config [:log :level])
-;;         levels (define-levels log-levels)
-;;         bindings (log-level levels level)]
-;;     (with-bindings levels
-;;       (app config))))
-
+(defn exception!
+  [message ^Throwable throwable]
+  (.log *logger* severe (str message) throwable))
