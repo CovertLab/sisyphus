@@ -115,13 +115,11 @@
 
 (defn iteration->seq
   [iteration]
-  (seq
-   (reify java.lang.Iterable 
-     (iterator [this] 
-       (reify java.util.Iterator
-         (hasNext [this] (.hasNext iteration))
-         (next [this] (.next iteration))
-         (remove [this] (.remove iteration)))))))
+  (when (.hasNext iteration)
+    (lazy-seq
+     (cons
+      (.next iteration)
+      (iteration->seq iteration)))))
 
 (defn decode-bytes
   [bytes]
