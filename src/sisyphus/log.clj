@@ -3,14 +3,13 @@
     [java.util.logging Level Logger]))
 
 (def ^{:dynamic true :tag Logger} *logger*
-  "Set up the logger(s)."
+  "Set up the loggers."
+  ; REQUIRES: project.clj to declare
+  ;   :jvm-opts ["-Djava.util.logging.config.file=resources/config/logging.properties"]
   ; TODO(jerry): Pass maps directly to the Stackdriver API or use logger object
   ;   params? Support Stackdriver logging levels?
-  ; TODO(jerry): Get the Logging.Handler to call flush() before exiting?
-  (do
-    (System/setProperty "java.util.logging.config.file"
-                        "resources/config/logging.properties")
-    (Logger/getLogger "sisyphus")))
+  ; TODO(jerry): Fetch the Logging.Handler and flush() before exiting?
+  (Logger/getLogger "sisyphus"))
 
 (def fine Level/FINE)
 (def info Level/INFO)
