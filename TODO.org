@@ -4,7 +4,6 @@
 ** (Ryan: investigating) Gaia.trigger() doesn't start the workflow unless workers are good and ready
 ** (Ryan: validating) adding workers made everything stop running: with 3 WCM workers, one of them waits and one runs the write-metadata task then times out while the third runs parca. later, I stopped listen(), started 3 more workers, then started listen() again, then it got very stuck. listen() printed nothing. the gaia log only printed Kafka messages about partitions. listen ^C printed the usual stacktrace stuff but wouldn't quit. no ^C response. ^D printed "Do you really want to exit ([y]/n)?" but wouldn't exit. then ^C finally exited.
 * questions / considerations
-** pick an easier way to tunnel to kafka than adding to /etc/hosts (Cloud IAP? ifconfig alias? HOSTALIASES? dynamic port forwarding? VPN?) *OR* obviate it with stackdriver logging
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** (Ryan: investigating) is it necessary to have running workers before flow.trigger() will work?
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. (if you start 3 worker nodes for WCM, 2 will take the para and write-json tasks, then the parca task takes so long that the write-json worker gives up.) Maybe workers should stick around while runs (or their run) are running, or maybe we just need to auto-start more of them on demand and make them start up faster.
@@ -27,22 +26,25 @@
 ** (Ryan: investigating) update Gaia.launch(): There's no ../../script/launch-sisyphus.sh in the pip, and it should launch all the servers in one gcloud call like the wcEcoli version does now
 ** standardize gaia API
 ** (Ryan: implementing) put commands in namespace
+** put each workflow run in its own namespace such as the GCS prefix "sisyphus:data/jerry/20190709.175452", pass the namespace name in each sisyphus task, and log it in each gaia & sisyphus log entry for filtering
 ** clean up each workflow run when done
 ** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
 ** (Ryan: validating) provide some means to find out what keys the workflow is waiting on (for debugging)
+** support task cancellation
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 * logs (for now, the logs are the UI)
-** support stackdriver logging and filtering: sisyphus and gaia
-*** also stackdriver debugger, error reporting, load trace & profiler, dashboards
-** log a message when a workflow stops running and indicate whether all tasks completed successfully
+** support stackdriver logging and filtering: gaia
+*** also stackdriver debugger, load trace & profiler, dashboards
+*** call the stackdriver API instead of java.util.logging in order to log structured records?
+** log a message when a workflow run stops running and indicate whether all tasks completed successfully
 ** store a persistant log of high level info plus error messages
-** ^C out of flow.listen() should not print a bunch of clutter in ipython
+** remove kafka-based logging, gaia flow.listen(), and tunneling through to the Kafka cluster
 ** store timestamp, sisyphus id in logs
 ** almost always filter logs for a specific run (workflow instance)
 ** sometimes filter logs for a specific task within a run
-** design Gaia and Sisyphus logs [both for journalctl and flow.listen()] to be more informative, less cluttered, and easier to read
+** design Gaia and Sisyphus logs to be more informative, less cluttered, easier to filter, and easier to read
 ** clearly label the action for every log entry
-** clearly label the error messages
+** clearly label the error messages via log/severe! or log/exception!
 ** design the content of each message, e.g.
 *** sisyphus-status: {u'status': u'create', u'docker-id': u'8441243d6973', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5', u'docker-config': {u'mounts': {u'/tmp/sisyphus/outputs/data/jerry/20190701.110950/kb': u'/wcEcoli/out/wf/kb'}, u'image': u'gcr.io/allen-discovery-center-mcovert/jerry-wcm-code:latest', u'command': [u'sh', u'-c', u'python -u -m wholecell.fireworks.runTask parca \'{"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}\'']}}
 **** should be more like
@@ -106,3 +108,6 @@
 ** remote log monitoring via flow.listen()
 *** give the sisyphus service account permissions to write to logs
 ** ideally, make a single log entry for a stack traceback
+** support stackdriver logging and filtering: sisyphus
+** pick an easier way to tunnel to kafka than adding to /etc/hosts (Cloud IAP? ifconfig alias? HOSTALIASES? dynamic port forwarding? VPN?) *OR* obviate it with stackdriver logging
+*** [^C out of flow.listen() should not print a bunch of clutter in ipython]

@@ -2,7 +2,7 @@
   :description "Eternally execute tasks"
   :url "http://github.com/CovertLab/sisyphus"
   :license {:name "MIT License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+            :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [lispyclouds/clj-docker-client "0.2.3"]
                  [com.google.cloud/google-cloud-logging "1.79.0"] ; do not exclude io.grpc/grpc-core io.grpc/grpc-api io.grpc/grpc-netty-shaded or else logging will fail to load classes
