@@ -6,7 +6,8 @@
    [sisyphus.archive :as archive]
    [sisyphus.cloud :as cloud]
    [sisyphus.docker :as docker]
-   [sisyphus.kafka :as kafka]))
+   [sisyphus.kafka :as kafka]
+   [sisyphus.log :as log]))
 
 (def full-name
   "Extract the string representation of the given keyword. This is an extension to the
@@ -31,7 +32,7 @@
     (try
       (cloud/delete-tree! [(.getAbsolutePath input)])
       (catch Exception e
-        (println "couldn't delete" (.getAbsolutePath input))))
+        (log/exception! (str "couldn't delete " (.getAbsolutePath input)) e)))
     (if directory?
       (.mkdirs input)
       (let [base (io/file (.getParent input))]
@@ -119,13 +120,23 @@
 
 (defn log!
   [kafka task status message]
-  (println status ":" message)
+  (log/info! status message)
   (send! kafka task status message :log-topic))
 
 (defn status!
   [kafka task status message]
-  (println status ":" message task)
+  (log/warn! status message)
   (send! kafka task status message :status-topic))
+
+(defn severe!
+  [kafka task status message]
+  (log/severe! status message)
+  (send! kafka task status message :status-topic))
+
+(defn exception!
+  [kafka task event throwable]
+  (log/exception! event throwable)
+  (send! kafka task "error" event :status-topic))
 
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
@@ -176,10 +187,9 @@
           (status! kafka task "exit" {:docker-id id :code code})
 
           (if (> code 0)
-            (status!
-             kafka task "error"
-             {:event "process-error"
-              :code code
+            (severe!
+             kafka task "process-error"
+             {:code code
               :log @lines})
 
             (doseq [output outputs]
@@ -198,10 +208,4 @@
          {:event "process-complete"})))
 
     (catch Exception e
-      (let [message (.getMessage e)
-            trace (map #(.toString %) (.getStackTrace e))]
-        (status!
-         kafka task "error"
-         {:event "task-error"
-          :message message
-          :trace trace})))))
+      (exception! kafka task "task-error" e))))

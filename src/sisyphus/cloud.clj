@@ -1,6 +1,7 @@
 (ns sisyphus.cloud
   (:require
-   [clojure.java.io :as io])
+   [clojure.java.io :as io]
+   [sisyphus.log :as log])
   (:import
    [java.io File FileInputStream]
    [com.google.cloud.storage
@@ -58,8 +59,7 @@
        (.create storage blob-info stream options)
        blob-info)
      (catch Exception e
-       (println "failed to upload" path "to" key)
-       (.printStackTrace e)))))
+       (log/exception! (str "failed to upload " path " to " key) e)))))
 
 (defn find-subpath
   [path prefix]
@@ -75,7 +75,7 @@
       (let [fullpath (.getAbsolutePath file)
             subpath (find-subpath fullpath path)
             subkey (join-path [key subpath])]
-        (println "uploading" fullpath "to" (str bucket ":" subkey))
+        (log/info! "uploading" fullpath "to" (str bucket ":" subkey))
         (upload! storage bucket subkey fullpath)))))
 
 (defn download!
@@ -88,7 +88,7 @@
     (.mkdirs base)
     (if blob
       (.downloadTo blob (get-path path))
-      (println "No blob with the key" (.toString blob-id)))))
+      (log/severe! "No blob with the key" (.toString blob-id)))))
 
 (defn directory-options
   [directory]
@@ -111,5 +111,5 @@
     (doseq [remote-key remote-keys]
       (let [local-key (.substring remote-key preamble)
             local-path (join-path [path local-key])]
-        (println "downloading from bucket" bucket "object" remote-key "to" local-path)
+        (log/info! "downloading from bucket" bucket "object" remote-key "to" local-path)
         (download! storage bucket remote-key local-path)))))

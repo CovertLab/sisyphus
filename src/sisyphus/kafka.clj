@@ -2,7 +2,8 @@
   (:require
    [cheshire.core :as json]
    [cheshire.factory :as factory]
-   [kinsky.client :as kafka]))
+   [kinsky.client :as kafka]
+   [sisyphus.log :as log]))
 
 (def poll-interval Long/MAX_VALUE)
 (def non-numeric-factory
@@ -45,12 +46,11 @@
       (let [topics (last record)]
         (doseq [[topic messages] topics]
           (doseq [message messages]
-            (println topic ":" message)
+            (log/info! topic ":" message)
             (let [value {topic (:value message)}]
               (handle topic (:value message)))))))
     (catch Exception e
-      (println (.getMessage e))
-      (.printStackTrace e))))
+      (log/exception! "kafka-handle-message" e))))
 
 (defn consume
   [consumer handle]
@@ -59,7 +59,7 @@
            (try
              (kafka/poll! consumer poll-interval)
              (catch Exception e
-               (println (.getMessage e))))]
+               (log/exception! "kafka-consume" e)))]
       (when-not (empty? records)
         (doseq [record records]
           (handle record)))

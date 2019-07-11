@@ -1,6 +1,8 @@
-.python-version
+/.python-version
 *.pyc
-target
+/target
 .lein-repl-history
 .nrepl-port
 pom.*
+/.idea
+/*.iml
