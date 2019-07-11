@@ -199,7 +199,7 @@
               (status!
                kafka task "complete"
                {:event "data-complete"
-                :root (:bucket output)
+                :root (:root task)
                 :path (:key output)
                 :key (str (:bucket output) ":" (:key output))}))))
 
