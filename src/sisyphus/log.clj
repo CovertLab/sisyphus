@@ -18,23 +18,23 @@
 
 (defn log!
   [^Level level & x]
-  (.log *logger* level (str x)))
+  (.log *logger* level (str x "\n")))
 
 (defn fine!
   [& x]
-  (.fine *logger* (str x)))
+  (.fine *logger* (str x "\n")))
 
 (defn info!
   [& x]
-  (.info *logger* (str x)))
+  (.info *logger* (str x "\n")))
 
 (defn warn!
   [& x]
-  (.warning *logger* (str x)))
+  (.warning *logger* (str x "\n")))
 
 (defn severe!
   [& x]
-  (.severe *logger* (str x)))
+  (.severe *logger* (str x "\n")))
 
 (defn exception!
   [message ^Throwable throwable]

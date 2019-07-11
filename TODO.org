@@ -16,7 +16,6 @@
 *** compare cloud shell to a gateway GCE instance
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
-** (Ryan: implementing) store archive with .tgz suffix *OR* store the directory of files instead of an archive
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
 =======
 ** service account setup; see https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances : recommends creating a new service account (like "sisyphus") rather than using the Compute Engine default service account; giving it the https://www.googleapis.com/auth/cloud-platform scope; and configuring the instance to run as that service account. Needed for Stackdriver? Presumably we can configure all scopes this way without environment vars.
@@ -25,13 +24,10 @@
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
-** (Ryan: implementing) the namespace should be independent of the bucket name
-** (Ryan: investigating) update Gaia.launch(): There's no ../../script/launch-sisyphus.sh in the pip, and it should launch all the servers in one gcloud call like the wcEcoli version does now
+** update Gaia.launch(): There's no ../../script/launch-sisyphus.sh in the pip, and it should launch all the servers in one gcloud call like the wcEcoli version does now
 ** standardize gaia API
-** (Ryan: implementing) put commands in namespace
 ** put each workflow run in its own namespace such as the GCS prefix "sisyphus:data/jerry/20190709.175452", pass the namespace name in each sisyphus task, and log it in each gaia & sisyphus log entry for filtering
 ** clean up each workflow run when done
-** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
 ** (Ryan: validating) provide some means to find out what keys the workflow is waiting on (for debugging)
 ** support task cancellation
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
@@ -72,7 +68,6 @@
 * optimization
 ** how come it takes (at least sometimes) many minutes for workers to start picking up tasks?
 ** tasks run very slowly. do we need VMs with faster CPUs? more RAM? more cores? GPUs? larger disk?
-** the log output comes out in batches of lines with many minutes between them
 ** optimization: reuse a running docker container when the previous task requested the same image
 ** optimization?: a separate set of nodes for each run
 * documentation
@@ -114,3 +109,8 @@
 ** support stackdriver logging and filtering: sisyphus
 ** pick an easier way to tunnel to kafka than adding to /etc/hosts (Cloud IAP? ifconfig alias? HOSTALIASES? dynamic port forwarding? VPN?) *OR* obviate it with stackdriver logging
 *** [^C out of flow.listen() should not print a bunch of clutter in ipython]
+** store archive with .tgz suffix *OR* store the directory of files instead of an archive
+** the namespace should be independent of the bucket name
+** put commands in namespace
+** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
+** the log output comes out in batches of lines with many minutes between them

@@ -146,6 +146,7 @@
   [{:keys [storage kafka docker config state]} task]
   (try
     (let [root (get-in config [:local :root])
+          user (or (System/getenv "USER") "root")
           inputs (find-locals! (str root "/inputs") (:inputs task))
           outputs (find-locals! (str root "/outputs") (:outputs task))
 
@@ -162,6 +163,8 @@
 
       (let [mounts (mount-map (concat inputs outputs) :local :internal)
             config {:image image
+                    ;; TODO: get sisyphus user to work in docker container
+                    ;; :user user
                     :mounts mounts
                     :command commands}
 
