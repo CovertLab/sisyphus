@@ -136,7 +136,7 @@
 (defn exception!
   [kafka task event throwable]
   (log/exception! event throwable)
-  (send! kafka task "error" event :status-topic))
+  (send! kafka task "error" {:event event} :status-topic))
 
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
