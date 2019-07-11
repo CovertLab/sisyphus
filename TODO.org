@@ -1,8 +1,6 @@
 * mysteries
 ** (Ryan: validating) sisyphus gets in bad state with rabbit when a task fails
-** (Ryan: validating) a parca task never got picked up by a worker
 ** (Ryan: investigating) Gaia.trigger() doesn't start the workflow unless workers are good and ready
-** (Ryan: validating) adding workers made everything stop running: with 3 WCM workers, one of them waits and one runs the write-metadata task then times out while the third runs parca. later, I stopped listen(), started 3 more workers, then started listen() again, then it got very stuck. listen() printed nothing. the gaia log only printed Kafka messages about partitions. listen ^C printed the usual stacktrace stuff but wouldn't quit. no ^C response. ^D printed "Do you really want to exit ([y]/n)?" but wouldn't exit. then ^C finally exited.
 * questions / considerations
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** (Ryan: investigating) is it necessary to have running workers before flow.trigger() will work?
@@ -22,7 +20,6 @@
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
-** update Gaia.launch(): There's no ../../script/launch-sisyphus.sh in the pip, and it should launch all the servers in one gcloud call like the wcEcoli version does now
 ** standardize gaia API
 ** put each workflow run in its own namespace such as the GCS prefix "sisyphus:data/jerry/20190709.175452", pass the namespace name in each sisyphus task, and log it in each gaia & sisyphus log entry for filtering
 ** clean up each workflow run when done
@@ -33,7 +30,6 @@
 ** support stackdriver logging and filtering: gaia
 *** also stackdriver debugger, load trace & profiler, dashboards
 *** call the stackdriver API instead of java.util.logging in order to log structured records?
-** log a message when a workflow run stops running and indicate whether all tasks completed successfully
 ** store a persistant log of high level info plus error messages
 ** remove kafka-based logging, gaia flow.listen(), and tunneling through to the Kafka cluster
 ** store timestamp, sisyphus id in logs
@@ -41,7 +37,6 @@
 ** sometimes filter logs for a specific task within a run
 ** design Gaia and Sisyphus logs to be more informative, less cluttered, easier to filter, and easier to read
 ** clearly label the action for every log entry
-** clearly label the error messages via log/severe! or log/exception!
 ** design the content of each message, e.g.
 *** sisyphus-status: {u'status': u'create', u'docker-id': u'8441243d6973', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5', u'docker-config': {u'mounts': {u'/tmp/sisyphus/outputs/data/jerry/20190701.110950/kb': u'/wcEcoli/out/wf/kb'}, u'image': u'gcr.io/allen-discovery-center-mcovert/jerry-wcm-code:latest', u'command': [u'sh', u'-c', u'python -u -m wholecell.fireworks.runTask parca \'{"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}\'']}}
 **** should be more like
@@ -52,7 +47,6 @@
 *** worker sisyphus-b: Fitting RNA synthesis probabilities.
 ** filter by run and optionally by task name or name pattern
 ** each run should have its own kafka topic(s) for logging, etc.
-** perhaps flow.listen() should tune in at the start of the run or from where listen left off
 ** remove internal debugging messages
 ** label each message for its purpose
 ** remove the u'text' clutter
@@ -112,3 +106,9 @@
 ** put commands in namespace
 ** "gaia-base bash[8924]: WARNING: Illegal reflective access by io.netty.util.internal.ReflectionUtil (file:/home/gaia/.m2/repository/io/netty/netty-all/4.1.11.Final/netty-all-4.1.11.Final.jar) to constructor java.nio.DirectByteBuffer(long,int); Please consider reporting this to the maintainers of io.netty.util.internal.ReflectionUtil; All illegal access operations will be denied in a future release"
 ** the log output comes out in batches of lines with many minutes between them
+** update Gaia.launch(): There's no ../../script/launch-sisyphus.sh in the pip, and it should launch all the servers in one gcloud call like the wcEcoli version does now
+** a parca task never got picked up by a worker
+** adding workers made everything stop running: with 3 WCM workers, one of them waits and one runs the write-metadata task then times out while the third runs parca. later, I stopped listen(), started 3 more workers, then started listen() again, then it got very stuck. listen() printed nothing. the gaia log only printed Kafka messages about partitions. listen ^C printed the usual stacktrace stuff but wouldn't quit. no ^C response. ^D printed "Do you really want to exit ([y]/n)?" but wouldn't exit. then ^C finally exited.
+** log a message when a workflow run stops running and indicate whether all tasks completed successfully
+** clearly label the error messages via log/severe! or log/exception!
+** perhaps flow.listen() should tune in at the start of the run or from where listen left off
