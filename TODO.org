@@ -17,9 +17,7 @@
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
-=======
 ** service account setup; see https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances : recommends creating a new service account (like "sisyphus") rather than using the Compute Engine default service account; giving it the https://www.googleapis.com/auth/cloud-platform scope; and configuring the instance to run as that service account. Needed for Stackdriver? Presumably we can configure all scopes this way without environment vars.
->>>>>>> 7b1f50a175f2bc853b9bb8cffc461872b09938b3
 ** create intermediate directory entries in object store for nested keys (it is still needed for gcsfuse; the web console browser doesn't need it)
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
