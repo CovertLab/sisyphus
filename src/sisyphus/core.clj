@@ -158,7 +158,7 @@
 (defn -main
   [& args]
   (try
-    (log/fine! "sisyphus rises....")
+    (log/info! "sisyphus rises....")
     (let [path "resources/config/sisyphus.clj"
           config (read-path path)
           state (start! config)]

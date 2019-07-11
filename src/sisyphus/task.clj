@@ -114,7 +114,7 @@
     (get-in kafka [:config topic])
     (merge
      {:id (:id task)
-      :space (:space task)
+      :root (:root task)
       :status status}
      message))))
 

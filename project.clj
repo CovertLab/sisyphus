@@ -10,4 +10,5 @@
                  [com.novemberain/langohr "5.1.0"]
                  [spootnik/kinsky "0.1.22"]]
   :jvm-opts ["-Djava.util.logging.config.file=resources/config/logging.properties"]
+  :pedantic? false
   :main sisyphus.core)
