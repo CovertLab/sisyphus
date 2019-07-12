@@ -52,17 +52,19 @@
 (defn pull-input!
   [storage {:keys [bucket key archive local directory?]}]
   (if directory?
-    (do
-      (cloud/download! storage bucket key archive)
-      (archive/unpack! archive local))
+    (cloud/download-tree! storage bucket key local)
+    ;; (do
+    ;;   (cloud/download! storage bucket key archive)
+    ;;   (archive/unpack! archive local))
     (cloud/download! storage bucket key local)))
 
 (defn push-output!
   [storage {:keys [local directory? archive bucket key]}]
   (if directory?
-    (do
-      (archive/pack! archive local)
-      (cloud/upload! storage bucket key archive))
+    (cloud/upload-tree! storage bucket key local)
+    ;; (do
+    ;;   (archive/pack! archive local)
+    ;;   (cloud/upload! storage bucket key archive))
     (cloud/upload! storage bucket key local)))
 
 (defn redirect-stdout
@@ -112,7 +114,7 @@
     (get-in kafka [:config topic])
     (merge
      {:id (:id task)
-      :space (:space task)
+      :root (:root task)
       :status status}
      message))))
 
@@ -134,7 +136,7 @@
 (defn exception!
   [kafka task event throwable]
   (log/exception! event throwable)
-  (send! kafka task "error" event :status-topic))
+  (send! kafka task "error" {:event event} :status-topic))
 
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
@@ -144,6 +146,7 @@
   [{:keys [storage kafka docker config state]} task]
   (try
     (let [root (get-in config [:local :root])
+          user (or (System/getenv "USER") "root")
           inputs (find-locals! (str root "/inputs") (:inputs task))
           outputs (find-locals! (str root "/outputs") (:outputs task))
 
@@ -160,6 +163,8 @@
 
       (let [mounts (mount-map (concat inputs outputs) :local :internal)
             config {:image image
+                    ;; TODO: get sisyphus user to work in docker container
+                    ;; :user user
                     :mounts mounts
                     :command commands}
 
@@ -197,7 +202,7 @@
               (status!
                kafka task "complete"
                {:event "data-complete"
-                :root (:bucket output)
+                :root (:root task)
                 :path (:key output)
                 :key (str (:bucket output) ":" (:key output))}))))
 

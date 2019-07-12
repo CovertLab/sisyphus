@@ -38,6 +38,7 @@
         (recur (concat subpaths paths))
         (do
           (if (.exists file)
+            ;; (io/delete-file path true)
             (io/delete-file path))
           (recur (rest paths)))))))
 
@@ -105,9 +106,10 @@
 
 (defn download-tree!
   [storage bucket key path]
-  (let [remote-keys (list-directory storage bucket key)]
+  (let [remote-keys (list-directory storage bucket key)
+        preamble (inc (count key))]
     (doseq [remote-key remote-keys]
-      (let [local-path (join-path [path remote-key])]
+      (let [local-key (.substring remote-key preamble)
+            local-path (join-path [path local-key])]
         (log/info! "downloading from bucket" bucket "object" remote-key "to" local-path)
         (download! storage bucket remote-key local-path)))))
-
