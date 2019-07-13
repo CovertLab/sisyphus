@@ -37,12 +37,16 @@
 ** support stackdriver logging and filtering: gaia
 *** also stackdriver debugger, load trace & profiler, dashboards
 *** call the stackdriver API instead of java.util.logging in order to log structured records?
+** when the app in-container prints a stack trace, get that into one log entry for readability (even if it's a heurstic aggregation) and set the log level to severe
+** logging the app in-container: avoid extra quoting and escaping:  textPayload: "INFO sisyphus: ("log" {:line " File \"/usr/local/lib/python2.7/runpy.py\", line 72, in _run_code"}) "
+** add an API method to list the current workflow names
 ** store a persistant log of high level info plus error messages
 ** remove kafka-based logging, gaia flow.listen(), and tunneling through to the Kafka cluster
 ** store timestamp, sisyphus id in logs
-** almost always filter logs for a specific run (workflow instance)
-** sometimes filter logs for a specific task within a run
+** pass the workflow name and the task name to sisyphus, then include them in all its log entries to filter on
 ** design Gaia and Sisyphus logs to be more informative, less cluttered, easier to filter, and easier to read
+*** filter log viewing by workflow name
+*** sometimes filter log viewing by task name
 ** clearly label the action for every log entry
 ** design the content of each message, e.g.
 *** sisyphus-status: {u'status': u'create', u'docker-id': u'8441243d6973', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5', u'docker-config': {u'mounts': {u'/tmp/sisyphus/outputs/data/jerry/20190701.110950/kb': u'/wcEcoli/out/wf/kb'}, u'image': u'gcr.io/allen-discovery-center-mcovert/jerry-wcm-code:latest', u'command': [u'sh', u'-c', u'python -u -m wholecell.fireworks.runTask parca \'{"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}\'']}}
@@ -52,12 +56,10 @@
 *** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'}
 **** should be more like
 *** worker sisyphus-b: Fitting RNA synthesis probabilities.
-** filter by run and optionally by task name or name pattern
-** each run should have its own kafka topic(s) for logging, etc.
 ** remove internal debugging messages
 ** label each message for its purpose
 ** remove the u'text' clutter
-** logging message levels; adjustable log filtering level
+** set log message levels
 ** streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
 ** adjust Kafka if possible to deliver log entries in smaller batches
 * errors
@@ -68,7 +70,7 @@
 ** how come it takes (at least sometimes) many minutes for workers to start picking up tasks?
 ** tasks run very slowly. do we need VMs with faster CPUs? more RAM? more cores? GPUs? larger disk?
 ** optimization: reuse a running docker container when the previous task requested the same image
-** optimization?: a separate set of nodes for each run
+** for apps with different worker node requirements [also an optimization?]: a separate set of nodes for each workflow
 * documentation
 ** document all the GCE VM setup factors: machine type? boot disk size? OS? Identity and API access? additional access scopes? software installation and configuration? startup script? metadata?
 ** write a step-by-step how-to document for lab members
@@ -78,7 +80,7 @@
 ** document how to make a Compute Engine monitor chart for worker node CPU usage: on GCP dashboard, add chart, Metric instance/cpu/utilization, Filter metric.labels.instance_name = starts_with("sisyphus") and maybe more metrics like instance/disk/read_bytes_count group by project_id aggregate by sum
 * features
 ** unit tests
-** web UI: show a graph of your current workflow run's steps, click on a step to see its inputs, outputs, log, and which inputs are available; show the workers and what run/task each one is running
+** web UI: show a graph of your current workflow's steps, click on a step to see its inputs, outputs, log, and which inputs are available; show the workers and what tasks each one is running
 ** tools to simplify and speed up the dev cycle
 ** implement nightly builds and PR builds
 ** need DNS names within the cloud rather than hardwired IP addresses
