@@ -63,7 +63,8 @@
 ** streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
 ** adjust Kafka if possible to deliver log entries in smaller batches
 * errors
-** return the error info (e.g. there's no storage bucket named "robin1") rather than hitting json-decoder-error trying to decode a POST response from the Gaia server
+** return the error info (e.g. there's no storage bucket named "robin1") in parseable JSON rather than causing a json-decoder-error decoding the server's response
+*** gaia client should check arg types before sending a request to the server
 ** need more error detection & reporting
 ** test what happens when things go wrong. does it emit helpful error messages? can it do self-repair?
 * optimization
