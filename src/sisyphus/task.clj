@@ -32,7 +32,7 @@
     (try
       (cloud/delete-tree! [(.getAbsolutePath input)])
       (catch Exception e
-        (log/exception! (str "couldn't delete " (.getAbsolutePath input)) e)))
+        (log/exception! e "couldn't delete" (.getAbsolutePath input))))
     (if directory?
       (.mkdirs input)
       (let [base (io/file (.getParent input))]
@@ -118,11 +118,6 @@
       :status status}
      message))))
 
-(defn log!
-  [kafka task status message]
-  (log/info! status message)
-  (send! kafka task status message :log-topic))
-
 (defn status!
   [kafka task status message]
   (log/warn! status message)
@@ -135,7 +130,7 @@
 
 (defn exception!
   [kafka task event throwable]
-  (log/exception! event throwable)
+  (log/exception! throwable event)
   (send! kafka task "error" {:event event} :status-topic))
 
 (defn perform-task!
@@ -154,11 +149,11 @@
           ;; commands (join-commands (:commands task))
           commands (first-command (:commands task))]
 
-      (log! kafka task "pull" {:image image})
+      (log/log! "pull" image)
       (docker/pull! docker image)
 
       (doseq [input inputs]
-        (log! kafka task "download" {:input input})
+        (log/log! "download" input)
         (pull-input! storage input))
 
       (let [mounts (mount-map (concat inputs outputs) :local :internal)
@@ -179,7 +174,7 @@
 
         (doseq [line (docker/logs docker id)]
           (swap! lines conj line)
-          (log! kafka task "log" {:line line}))
+          (log/log! line))
 
         (status!
          kafka task "container"
@@ -193,10 +188,10 @@
             (severe!
              kafka task "process-error"
              {:code code
-              :log @lines})
+              :log @lines}) ; TODO(jerry): Don't re-log the lines, to reduce confusion.
 
             (doseq [output outputs]
-              (log! kafka task "upload" {:path output})
+              (log/log! "upload" output)
               (push-output! storage output)
 
               (status!

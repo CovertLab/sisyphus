@@ -75,7 +75,7 @@
   [channel metadata ^bytes payload]
   (let [raw (String. payload "UTF-8")
         message (json/parse-string raw true)]
-    (log/info "message received:" message)
+    (log/info! "rabbit message received:" message)
     (lbasic/ack channel (:delivery-tag metadata))))
 
 (defn -main

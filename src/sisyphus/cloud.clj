@@ -59,7 +59,7 @@
        (.create storage blob-info stream options)
        blob-info)
      (catch Exception e
-       (log/exception! (str "failed to upload " path " to " key) e)))))
+       (log/exception! e "failed to upload" path "to" key)))))
 
 (defn find-subpath
   [path prefix]

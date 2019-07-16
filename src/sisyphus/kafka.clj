@@ -46,11 +46,11 @@
       (let [topics (last record)]
         (doseq [[topic messages] topics]
           (doseq [message messages]
-            (log/info! topic ":" message)
+            (log/debug! (str topic ":") message)
             (let [value {topic (:value message)}]
               (handle topic (:value message)))))))
     (catch Exception e
-      (log/exception! "kafka-handle-message" e))))
+      (log/exception! e "kafka-handle-message"))))
 
 (defn consume
   [consumer handle]
@@ -59,7 +59,7 @@
            (try
              (kafka/poll! consumer poll-interval)
              (catch Exception e
-               (log/exception! "kafka-consume" e)))]
+               (log/exception! e "kafka-consume")))]
       (when-not (empty? records)
         (doseq [record records]
           (handle record)))

@@ -44,7 +44,7 @@
         "us-west1-b"))
       (System/exit 0))
     (catch Exception e
-      (log/exception! "terminating" e))))
+      (log/exception! e "terminating"))))
 
 (defn timer
   [wait f]
@@ -111,7 +111,7 @@
         (langohr/ack channel (:delivery-tag metadata))
         (swap! (:state state) reset-state! (:config state))))
     (catch Exception e
-      (log/exception! "rabbit-task" e))))
+      (log/exception! e "rabbit-task"))))
 
 (defn connect!
   [config]
