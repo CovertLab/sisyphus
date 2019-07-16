@@ -149,11 +149,11 @@
           ;; commands (join-commands (:commands task))
           commands (first-command (:commands task))]
 
-      (log/log! "pull" image)
+      (log/info! "pull" image)
       (docker/pull! docker image)
 
       (doseq [input inputs]
-        (log/log! "download" input)
+        (log/info! "download" input)
         (pull-input! storage input))
 
       (let [mounts (mount-map (concat inputs outputs) :local :internal)
@@ -174,7 +174,7 @@
 
         (doseq [line (docker/logs docker id)]
           (swap! lines conj line)
-          (log/log! line))
+          (log/info! line))
 
         (status!
          kafka task "container"
@@ -191,7 +191,7 @@
               :log @lines}) ; TODO(jerry): Don't re-log the lines, to reduce confusion.
 
             (doseq [output outputs]
-              (log/log! "upload" output)
+              (log/info! "upload" output)
               (push-output! storage output)
 
               (status!

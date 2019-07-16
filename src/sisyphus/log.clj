@@ -50,7 +50,8 @@
             (.setSeverity severity)
             (.setLogName name)
             (.setResource resource)
-            ; TODO(jerry): .setOperation? w/ID, producer, first?, last?
+            ; TODO(jerry): .setOperation w/ID, producer e.g. to distinguish
+            ;  task uploads, downloads, and lines.
             .build)
         entries (Collections/singletonList entry)]
     (.write logging entries (make-array Logging$WriteOption 0))
