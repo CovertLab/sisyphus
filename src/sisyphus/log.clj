@@ -10,6 +10,7 @@
   "Build a loggable MonitoredResource with a name-tag label."
   [^String tag]
   (let [builder ^MonitoredResource$Builder (MonitoredResource/newBuilder "gce_instance")]
+    ; TODO(jerry): Add the "instance_id" and "zone" labels.
     (-> builder (.addLabel "tag" tag) .build)))
 
 (defn- make-logger

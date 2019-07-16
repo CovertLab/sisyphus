@@ -174,7 +174,8 @@
 
         (doseq [line (docker/logs docker id)]
           (swap! lines conj line)
-          (log/info! line))
+          (log/info! line)) ; TODO(jerry): Detect stack tracebacks heuristically;
+            ; join those lines into one message and log as severe.
 
         (status!
          kafka task "container"
