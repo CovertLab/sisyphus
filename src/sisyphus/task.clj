@@ -51,6 +51,7 @@
 
 (defn pull-input!
   [storage {:keys [bucket key archive local directory?]}]
+  (log/info! "downloading" local "from" (str bucket ":" key))
   (if directory?
     (cloud/download-tree! storage bucket key local)
     ;; (do
@@ -60,6 +61,7 @@
 
 (defn push-output!
   [storage {:keys [local directory? archive bucket key]}]
+  (log/info! "uploading" local "to" (str bucket ":" key))
   (if directory?
     (cloud/upload-tree! storage bucket key local)
     ;; (do
@@ -153,7 +155,6 @@
       (docker/pull! docker image)
 
       (doseq [input inputs]
-        (log/info! "download" input)
         (pull-input! storage input))
 
       (let [mounts (mount-map (concat inputs outputs) :local :internal)
@@ -192,7 +193,6 @@
               :log @lines}) ; TODO(jerry): Don't re-log the lines, to reduce confusion.
 
             (doseq [output outputs]
-              (log/info! "upload" output)
               (push-output! storage output)
 
               (status!

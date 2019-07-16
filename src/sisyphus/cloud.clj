@@ -59,7 +59,7 @@
        (.create storage blob-info stream options)
        blob-info)
      (catch Exception e
-       (log/exception! e "failed to upload" path "to" key)))))
+       (log/exception! e "failed to upload" path "to" (str bucket ":" key))))))
 
 (defn find-subpath
   [path prefix]
@@ -75,7 +75,6 @@
       (let [fullpath (.getAbsolutePath file)
             subpath (find-subpath fullpath path)
             subkey (join-path [key subpath])]
-        (log/info! "uploading" fullpath "to" (str bucket ":" subkey))
         (upload! storage bucket subkey fullpath)))))
 
 (defn download!
@@ -88,7 +87,7 @@
     (.mkdirs base)
     (if blob
       (.downloadTo blob (get-path path))
-      (log/error! "No blob with the key" (.toString blob-id)))))
+      (log/error! "failed to download" (str bucket ":" key)))))
 
 (defn directory-options
   [directory]
@@ -111,5 +110,4 @@
     (doseq [remote-key remote-keys]
       (let [local-key (.substring remote-key preamble)
             local-path (join-path [path local-key])]
-        (log/info! "downloading from bucket" bucket "object" remote-key "to" local-path)
         (download! storage bucket remote-key local-path)))))
