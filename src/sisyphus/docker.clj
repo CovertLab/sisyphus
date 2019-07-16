@@ -215,7 +215,7 @@
     (future
       (let [logs (docker/logs docker id)]
         (doseq [line logs]
-          (log/warn! "docker-run" line))))
+          (log/info! line))))
     (if (:detach options)
       id
       (docker/wait-container docker id))))

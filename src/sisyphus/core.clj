@@ -103,11 +103,11 @@
   (try
     (let [raw (String. payload "UTF-8")
           task (json/parse-string raw true)]
-      (log/warn! "starting-task" task)
+      (log/notice! "starting-task" task)
       (do
         (swap! (:state state) run-state! task)
         (task/perform-task! state task)
-        (log/warn! "task-complete" task)
+        (log/notice! "task-complete" task)
         (langohr/ack channel (:delivery-tag metadata))
         (swap! (:state state) reset-state! (:config state))))
     (catch Exception e

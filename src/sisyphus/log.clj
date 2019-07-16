@@ -26,8 +26,8 @@
 
 (defn tag
   "Call f in a context of a named logger."
-  ; TODO(jerry): Use this at the top level with the server type name or
-  ;  type + instance name, also for each task to perform with the task name.
+  ; TODO(jerry): Call this at the top level with the server instance name
+  ;  (core/signature), also for each perform-task! with the workflow + task name.
   [name f]
   (binding [*logger* (make-logger name)]
     (f)))
@@ -69,7 +69,7 @@
 (def info Severity/INFO) ; routine info
 (def notice Severity/NOTICE) ; significant events like start up, shut down, or configuration
 (def warning Severity/WARNING) ; might cause problems
-(def severe Severity/ERROR) ; likely to cause problems
+(def error Severity/ERROR) ; likely to cause problems
 ;(def critical Severity/CRITICAL) ; severe problems or brief outagaes
 ;(def alert Severity/ALERT) ; a person should take action immediately
 ;(def emergeny Severity/EMERGENCY) ; one or more systems are unusable
@@ -98,11 +98,13 @@
   [& x]
   (apply log! warning x))
 
-(defn severe!
+(defn error!
   [& x]
-  (apply log! severe x))
+  (apply log! error x))
+
+(def severe! error!)
 
 (defn exception!
   [^Throwable throwable & x]
   ; TODO(jerry): LogEntryBuilder.setSourceLocation().
-  (apply log! severe (concat x [(stack-trace throwable)])))
+  (apply log! error (concat x [(stack-trace throwable)])))

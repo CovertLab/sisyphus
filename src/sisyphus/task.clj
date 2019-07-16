@@ -120,12 +120,12 @@
 
 (defn status!
   [kafka task status message]
-  (log/warn! status message)
+  (log/notice! status message)
   (send! kafka task status message :status-topic))
 
-(defn severe!
+(defn error!
   [kafka task status message]
-  (log/severe! status message)
+  (log/error! status message)
   (send! kafka task status message :status-topic))
 
 (defn exception!
@@ -175,7 +175,7 @@
         (doseq [line (docker/logs docker id)]
           (swap! lines conj line)
           (log/info! line)) ; TODO(jerry): Detect stack tracebacks heuristically;
-            ; join those lines into one message and log as severe.
+            ; join those lines into one message and log as error!
 
         (status!
          kafka task "container"
@@ -186,7 +186,7 @@
           (status! kafka task "exit" {:docker-id id :code code})
 
           (if (> code 0)
-            (severe!
+            (error!
              kafka task "process-error"
              {:code code
               :log @lines}) ; TODO(jerry): Don't re-log the lines, to reduce confusion.

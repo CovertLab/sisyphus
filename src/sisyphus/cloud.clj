@@ -88,7 +88,7 @@
     (.mkdirs base)
     (if blob
       (.downloadTo blob (get-path path))
-      (log/severe! "No blob with the key" (.toString blob-id)))))
+      (log/error! "No blob with the key" (.toString blob-id)))))
 
 (defn directory-options
   [directory]
