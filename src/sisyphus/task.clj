@@ -149,11 +149,12 @@
           inputs (find-locals! (str root "/inputs") (:inputs task))
           outputs (find-locals! (str root "/outputs") (:outputs task))
 
+          tag (str log/gce-instance-name "." (:name task "no-name"))
           image (:image task)
           ;; commands (join-commands (:commands task))
           commands (first-command (:commands task))]
 
-      (log/info! "pull" image)
+      (log/info! "pull" image "for" tag) ; TODO(jerry): (log/tag tag ...)
       (docker/pull! docker image)
 
       (doseq [input inputs]
