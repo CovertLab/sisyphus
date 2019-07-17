@@ -1,4 +1,7 @@
 (ns sisyphus.log
+  (:require
+    [clojure.string :as string]
+    [clj-http.client :as http])
   (:import
     [java.io PrintWriter StringWriter]
     [java.util Collections]
@@ -6,12 +9,32 @@
     [com.google.cloud.logging LogEntry LogEntry$Builder Logging LoggingOptions
      Logging$WriteOption Payload Payload$StringPayload Severity]))
 
+(defn gce-metadata
+  "Retrieve a GCE instance metadata field."
+  [fieldname default]
+  (try
+    (:body
+      (http/get
+       (str "http://metadata.google.internal/computeMetadata/v1/instance/" fieldname)
+       {:headers
+        {:metadata-flavor "Google"}}))
+    (catch Exception e default)))
+
+(def gce-instance-name
+  (gce-metadata "name" "local"))
+
+(def gce-zone
+  (last (string/split (gce-metadata "zone" "not-on-GCE") #"/")))
+
 (defn- monitored-resource
   "Build a loggable MonitoredResource with a name-tag label."
   [^String tag]
   (let [builder ^MonitoredResource$Builder (MonitoredResource/newBuilder "gce_instance")]
-    ; TODO(jerry): Add the "instance_id" and "zone" labels.
-    (-> builder (.addLabel "tag" tag) .build)))
+    (-> builder
+        (.addLabel "tag" tag)
+        (.addLabel "instance_id" gce-instance-name)
+        (.addLabel "zone" gce-zone)
+        .build)))
 
 (defn- make-logger
   "Make a named logger with a name-tag label."
@@ -22,7 +45,7 @@
    :resource (monitored-resource name)})
 
 (def ^:dynamic *logger*
-  (make-logger "sisyphus"))
+  (make-logger gce-instance-name))
 
 (defn tag
   "Call f in a context of a named logger."

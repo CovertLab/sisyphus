@@ -5,7 +5,6 @@
    [clojure.java.shell :as sh]
    [cheshire.core :as json]
    [langohr.basic :as langohr]
-   [clj-http.client :as http]
    [sisyphus.archive :as archive]
    [sisyphus.kafka :as kafka]
    [sisyphus.log :as log]
@@ -17,20 +16,10 @@
 (def apoptosis-interval 300000)
 (def wait-interval (* 10 apoptosis-interval))
 
-(defn signature
-  []
-  (try
-    (:body
-     (http/get
-      "http://metadata.google.internal/computeMetadata/v1/instance/name"
-      {:headers
-       {:metadata-flavor "Google"}}))
-    (catch Exception e "local")))
-
 (defn apoptosis
   []
   (try
-    (let [self (signature)]
+    (let [self log/gce-instance-name]
       (log/info! self "terminating")
       (log/info!
        (sh/sh
@@ -41,7 +30,7 @@
         "delete"
         self
         "--zone"
-        "us-west1-b"))
+        log/gce-zone))
       (System/exit 0))
     (catch Exception e
       (log/exception! e "terminating"))))
