@@ -65,6 +65,7 @@
   (log-entry! severity (Payload$StringPayload/of message))
   (println (str severity ": " message)))
 
+;; Stackdriver log severity levels from lowest to highest priority.
 (def debug Severity/DEBUG)
 (def info Severity/INFO) ; routine info
 (def notice Severity/NOTICE) ; significant events like start up, shut down, or configuration
