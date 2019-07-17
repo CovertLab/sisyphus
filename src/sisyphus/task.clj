@@ -117,7 +117,7 @@
     (merge
      {:id (:id task)
       :root (:root task)
-      :status status}
+      :event status}
      message))))
 
 (defn status!
@@ -131,9 +131,11 @@
   (send! kafka task status message :status-topic))
 
 (defn exception!
-  [kafka task event throwable]
-  (log/exception! throwable event)
-  (send! kafka task "error" {:event event} :status-topic))
+  [kafka task status message throwable]
+  (log/exception! throwable status)
+  (send!
+   kafka task status
+   (assoc message :exception (.toString throwable)) :status-topic))
 
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
@@ -167,10 +169,10 @@
             id (docker/create! docker config)
             lines (atom [])]
 
-        (status! kafka task "create" {:docker-id id :docker-config config})
+        (status! kafka task "container-create" {:docker-id id :docker-config config})
         (swap! state assoc-in [:task :docker-id] id)
 
-        (status! kafka task "start" {:docker-id id})
+        (status! kafka task "execution-start" {:docker-id id})
         (docker/start! docker id)
 
         (doseq [line (docker/logs docker id)]
@@ -179,12 +181,12 @@
             ; join those lines into one message and log as error!
 
         (status!
-         kafka task "container"
+         kafka task "execution-complete"
          {:docker-id id
           :status (.toString (docker/info docker id))})
 
         (let [code (docker/exit-code (docker/info docker id))]
-          (status! kafka task "exit" {:docker-id id :code code})
+          (status! kafka task "container-exit" {:docker-id id :code code})
 
           (if (> code 0)
             (error!
@@ -196,15 +198,12 @@
               (push-output! storage output)
 
               (status!
-               kafka task "complete"
-               {:event "data-complete"
-                :root (:root task)
+               kafka task "data-complete"
+               {:root (:root task)
                 :path (:key output)
                 :key (str (:bucket output) ":" (:key output))}))))
 
-        (status!
-         kafka task "complete"
-         {:event "process-complete"})))
+        (status! kafka task "process-complete" {})))
 
     (catch Exception e
-      (exception! kafka task "task-error" e))))
+      (exception! kafka task "task-error" {:message (.getMessage e)} e))))
