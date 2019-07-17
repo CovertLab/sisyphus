@@ -20,7 +20,7 @@
   []
   (try
     (let [self log/gce-instance-name]
-      (log/info! self "terminating")
+      (log/info! "sisyphus terminating" self)
       (log/info!
        (sh/sh
         "/snap/bin/gcloud"
@@ -147,7 +147,7 @@
 (defn -main
   [& args]
   (try
-    (log/info! "sisyphus rises....")
+    (log/info! "sisyphus rises" log/gce-instance-name "...")
     (let [path "resources/config/sisyphus.clj"
           config (read-path path)
           state (start! config)]

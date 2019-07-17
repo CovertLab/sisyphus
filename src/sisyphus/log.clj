@@ -29,12 +29,11 @@
 (defn- monitored-resource
   "Build a loggable MonitoredResource with a name-tag label."
   [^String tag]
-  (let [builder ^MonitoredResource$Builder (MonitoredResource/newBuilder "gce_instance")]
-    (-> builder
-        (.addLabel "tag" tag)
-        (.addLabel "instance_id" gce-instance-name)
-        (.addLabel "zone" gce-zone)
-        .build)))
+  (-> ^MonitoredResource$Builder (MonitoredResource/newBuilder "gce_instance")
+      (.addLabel "tag" tag)
+      (.addLabel "instance_id" gce-instance-name)
+      (.addLabel "zone" gce-zone)
+      .build))
 
 (defn- make-logger
   "Make a named logger with a name-tag label."
