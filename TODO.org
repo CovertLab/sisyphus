@@ -31,7 +31,6 @@
 ** standardize gaia API
 ** put each workflow run in its own namespace such as the GCS prefix "sisyphus:data/jerry/20190709.175452", pass the namespace name in each sisyphus task, and log it in each gaia & sisyphus log entry for filtering
 ** clean up each workflow run when done
-** (Ryan: validating) provide some means to find out what keys the workflow is waiting on (for debugging)
 ** support task cancellation
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
@@ -129,3 +128,4 @@
 *** call the stackdriver API instead of java.util.logging (multiple benefits)
 ** logging the app in-container: avoid extra quoting and escaping:  textPayload: "INFO sisyphus: ("log" {:line " File \"/usr/local/lib/python2.7/runpy.py\", line 72, in _run_code"}) "
 ** set log message levels
+** (Ryan: validating) provide some means to find out what keys the workflow is waiting on (for debugging)
