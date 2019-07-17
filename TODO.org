@@ -1,7 +1,7 @@
 * mysteries
 ** (Ryan: validating) sisyphus gets in bad state with rabbit when a task fails
 ** (Ryan: investigating) Gaia.trigger() doesn't start the workflow unless workers are good and ready
-** sometimes the WCM WF runs Parca then doesn't continue on to run the following tasks
+** (Ryan: validating) sometimes the WCM WF runs Parca then doesn't continue on to run the following tasks
 * questions / considerations
 ** RENAME EVERYTHING
 *** key --> name
@@ -15,7 +15,6 @@
 ** (Ryan: investigating) is it necessary to have running workers before flow.trigger() will work?
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. [Workaround: The write-json task now waits for parca output just so its worker node won't time out waiting for more work to do.] Maybe workers should stick around while runs (or their run) are running, or maybe we should just auto-start more of them on demand and make them start up faster.
 *** auto-launch and shutdown workers, probably mediated by Gaia. Either accept a worker count from the workflow builder for speed and adjustability or react to the queue length to be more automatic. [Low priority since the WCM builder now does it.]
-** (Ryan: validating) worker nodes need to be robust to task failures
 ** (Ryan: validating) the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
 ** is the gateway machine obsolete now that the workflow builder can connect to gaia-base and zookeeper-prime?
 *** do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
@@ -31,7 +30,6 @@
 ** standardize gaia API
 ** put each workflow run in its own namespace such as the GCS prefix "sisyphus:data/jerry/20190709.175452", pass the namespace name in each sisyphus task, and log it in each gaia & sisyphus log entry for filtering
 ** clean up each workflow run when done
-** support task cancellation
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
 * logs (for now, the logs are the UI)
@@ -64,7 +62,6 @@
 ** label each message for its purpose
 ** remove the u'text' clutter
 ** (jerry) streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
-** (ryan) adjust Docker calls if possible to deliver log entries in smaller batches
 * errors
 ** return the error info (e.g. there's no storage bucket named "robin1") in parseable JSON rather than causing a json-decoder-error decoding the server's response
 ** need more error detection & reporting
@@ -129,3 +126,6 @@
 ** logging the app in-container: avoid extra quoting and escaping:  textPayload: "INFO sisyphus: ("log" {:line " File \"/usr/local/lib/python2.7/runpy.py\", line 72, in _run_code"}) "
 ** set log message levels
 ** (Ryan: validating) provide some means to find out what keys the workflow is waiting on (for debugging)
+** (Ryan: validating) worker nodes need to be robust to task failures
+** (Ryan) adjust Docker calls if possible to deliver log entries in smaller batches
+** support task cancellation

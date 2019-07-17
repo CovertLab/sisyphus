@@ -46,24 +46,20 @@
   (and
    id
    (= id (:id message))
-   (= :event "terminate")))
+   (= "terminate" (:event message))))
 
 (defn sisyphus-handle-kafka
   [state topic message]
   (let [task (:task @(:state state))
         {:keys [id docker-id]}
         (select-keys task [:id :docker-id])]
-    (when (terminate? message id)
-      (docker/kill! (:docker state) docker-id)
-      (task/status! (:kafka state) (:task @state) "kill" task)
-      (swap! (:state state) assoc :status :waiting :task {})
-      (kafka/send!
-       (get-in state [:kafka :producer])
-       (get-in state [:config :kafka :status-topic])
-       {:id id
-        :task task
-        :status "killed"
-        :by message}))))
+    (try
+      (when (terminate? message id)
+        (docker/kill! (:docker state) docker-id)
+        (task/status! (:kafka state) task "process-terminated" message)
+        (swap! (:state state) assoc :status :waiting :task {}))
+      (catch Exception e
+        (log/exception! e "TERMINATION FAILED")))))
 
 (defn apoptosis-timer
   [delay]
@@ -117,9 +113,11 @@
                  :task {}
                  :timer (apoptosis-timer
                          (get-in config [:timer :initial] wait-interval))})}
+        producer (kafka/boot-producer (:kafka config))
+        state (assoc state :kafka {:producer producer :config (:kafka config)})
         handle (partial sisyphus-handle-kafka state)
-        kafka (kafka/boot-kafka (:kafka config) handle)]
-    (assoc state :kafka kafka)))
+        consumer (kafka/boot-consumer (:kafka config) handle)]
+    (update state :kafka merge consumer)))
 
 (defn start!
   "Start the system by making all the required connections and returning the state map."
