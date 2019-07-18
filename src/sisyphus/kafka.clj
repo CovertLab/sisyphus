@@ -46,7 +46,6 @@
       (let [topics (last record)]
         (doseq [[topic messages] topics]
           (doseq [message messages]
-            (log/debug! (str topic ":") message)
             (let [value {topic (:value message)}]
               (handle topic (:value message)))))))
     (catch Exception e
