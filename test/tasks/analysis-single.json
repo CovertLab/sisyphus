@@ -4,9 +4,8 @@
    "sisyphus:data/wcm/over/sim-out": "/wcEcoli/out/analysis/wildtype_000000/"},
  "outputs": {
    "sisyphus:data/wcm/over/plot-out": "/wcEcoli/out/analysis/wildtype_000000/000000/generation_000000/000000/plotOut/"},
- "commands": [{
-   "command": [
-     "python",
-     "-u",
-     "runscripts/manual/analysisSingle.py",
-     "analysis"]}]}
+ "command": [
+   "python",
+   "-u",
+   "runscripts/manual/analysisSingle.py",
+   "analysis"]}
