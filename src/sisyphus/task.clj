@@ -116,7 +116,7 @@
     (get-in kafka [:config topic])
     (merge
      {:id (:id task)
-      :root (:root task)
+      :workflow (:workflow task)
       :event status}
      message))))
 
@@ -136,7 +136,7 @@
 
 (defn task-tag
   [task]
-  (let [workflow-name (:root task "no-workflow")
+  (let [workflow-name (:workflow task "no-workflow")
         task-name (:name task "no-name")]
     (str log/gce-instance-name "." workflow-name "." task-name)))
 
@@ -154,7 +154,8 @@
 
           image (:image task)
           ;; commands (join-commands (:commands task))
-          commands (first-command (:commands task))]
+
+          command (or (:command task) (first-command (:commands task)))]
 
       (log/tag
        (task-tag task)
@@ -207,7 +208,7 @@
 
                  (status!
                   kafka task "data-complete"
-                  {:root (:root task)
+                  {:workflow (:workflow task)
                    :path (:key output)
                    :key (str (:bucket output) ":" (:key output))}))))
 
