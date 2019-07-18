@@ -28,26 +28,18 @@
 ** auto-create the output bucket?
 * gaia
 ** standardize gaia API
-** put each workflow run in its own namespace such as the GCS prefix "sisyphus:data/jerry/20190709.175452", pass the namespace name in each sisyphus task, and log it in each gaia & sisyphus log entry for filtering
 ** clean up each workflow run when done
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
 * logs (for now, the logs are the UI)
-** (jerry) support stackdriver logging and filtering: gaia
 ** figure out how to filter viewing by workflow name or user or task. Which LogEntry fields are most useful for that? log name? log "tag" label? .setOperation() [ID, producer]? setSourceLocation() esp. for stack traces?
-*** add the "instance_id" and "zone" labels to gce_instance monitored resources?
-*** (jerry) have gaia pass the task name to sisyphus and use it with sisyphus log/tag
-**** check that the given log name tag matches the pattern '[-.\w]+'
 *** log a sequence of docker output lines as a batch (mainly an optimization but it could reduce log interleaving between tasks)
 *** support JsonPayload in the stackdriver API for logging structured records?
 *** also try stackdriver debugger, load trace & profiler, dashboards
 ** when the app in-container prints a stack trace, get that into one log entry for readability (even if it's a heurstic aggregation) and set the log level to severe
-** when the docker app run returns an error code, try not to re-log the same output lines (since that's confusing to read) and set the severity level to error
 ** preserve indentation whitespace in docker app run output lines. is it only TABs that don't work like parca's output "wrote\n\t /wcEcoli/out/wf/kb/rawData.cPickle ..."?
-** store a persistant log of high level info plus error messages
-** (jerry) remove kafka-based logging from gaia client, wcm.py, ssh-tunnel.sh, and *maybe* from sisyphus and gaia jars
-** store sisyphus id in logs
-** pass the workflow name and the task name to sisyphus, then include them in all its log entries to filter on
+** store a persistant log of high level info plus error messages, esp. for CI runs
+** (jerry) remove kafka-based logging from gaia client [needs testing], ssh-tunnel.sh, sisyphus [done except for removing :log-topic from config.clj], and gaia [none]
 ** design Gaia and Sisyphus logs to be more informative, less cluttered, easier to filter, and easier to read
 ** clearly label the action for every log entry
 ** (jerry) design the content of each message, e.g.
@@ -129,3 +121,9 @@
 ** (Ryan: validating) worker nodes need to be robust to task failures
 ** (Ryan) adjust Docker calls if possible to deliver log entries in smaller batches
 ** support task cancellation
+** put each workflow run in its own namespace such as WCM_jerry_20190716.021305, pass the namespace name in each sisyphus task, and log it in each gaia & sisyphus log entry for filtering
+** (jerry) support stackdriver logging and filtering: gaia
+*** (jerry) add the "instance_id" and "zone" labels to gce_instance monitored resources
+*** (jerry) have gaia pass the task name to sisyphus and use it with sisyphus log/tag
+** (jerry) when the docker app run returns an error code, don't re-log the same output lines (since that's confusing to read) and set the severity level to error
+** store sisyphus id in logs
