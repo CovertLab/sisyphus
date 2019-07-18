@@ -1,7 +1,5 @@
 * mysteries
-** (Ryan: investigating) Gaia.trigger() doesn't start the workflow unless workers are good and ready
 * questions / considerations
-** (Ryan: investigating) is it necessary to have running workers before flow.trigger() will work?
 ** (Ryan) RENAME EVERYTHING
 *** key --> name
 *** root --> workflow
@@ -132,3 +130,5 @@
 ** (Ryan: validating) sisyphus gets in bad state with rabbit when a task fails
 ** (Ryan: validating) sometimes the WCM WF runs Parca then doesn't continue on to run the following tasks
 ** (Ryan: validating) the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
+** (Ryan: investigating) Gaia.trigger() doesn't start the workflow unless workers are good and ready
+** (Ryan: investigating) is it necessary to have running workers before flow.trigger() will work?
