@@ -1,15 +1,6 @@
 * mysteries
+** (Ryan) sometimes rabbit messages are not received by sisyphus
 * questions / considerations
-** (Ryan) RENAME EVERYTHING
-*** key     --> name
-*** root    --> workflow
-*** process --> step
-*** command --> command
-*** merge   --> merge
-*** halt    --> halt
-*** trigger --> run
-*** expire  --> expire
-*** ??? --> ???
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. [Workaround: The write-json task now waits for parca output just so its worker node won't time out waiting for more work to do.] Maybe workers should stick around while runs (or their run) are running, or maybe we should just auto-start more of them on demand and make them start up faster.
 *** auto-launch and shutdown workers, probably mediated by Gaia. Either accept a worker count from the workflow builder for speed and adjustability or react to the queue length to be more automatic. [Low priority since the WCM builder now does it.]
@@ -134,3 +125,13 @@
 ** (Ryan: validating) the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
 ** (Ryan: investigating) Gaia.trigger() doesn't start the workflow unless workers are good and ready
 ** (Ryan: investigating) is it necessary to have running workers before flow.trigger() will work?
+** (Ryan) RENAME EVERYTHING
+*** key     --> name
+*** root    --> workflow
+*** process --> step
+*** command --> command
+*** merge   --> merge
+*** halt    --> halt
+*** trigger --> run
+*** expire  --> expire
+*** ??? --> ???
