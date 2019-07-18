@@ -171,7 +171,7 @@
                        ;; TODO: get sisyphus user to work in docker container
                        ;; :user user
                        :mounts mounts
-                       :command commands}
+                       :command command}
 
                id (docker/create! docker config)
                lines (atom [])]
