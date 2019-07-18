@@ -56,6 +56,7 @@
     (try
       (when (terminate? message id)
         (docker/kill! (:docker state) docker-id)
+        (log/notice! "task terminated")
         (task/status! (:kafka state) task "process-terminated" message)
         (swap! (:state state) assoc :status :waiting :task {}))
       (catch Exception e
@@ -88,15 +89,15 @@
   (try
     (let [raw (String. payload "UTF-8")
           task (json/parse-string raw true)]
-      (log/notice! "starting-task" task)
+      (log/notice! "task start" task)
       (do
         (swap! (:state state) run-state! task)
         (task/perform-task! state task)
-        (log/notice! "task-complete" task)
+        (log/notice! "task complete" task)
         (langohr/ack channel (:delivery-tag metadata))
         (swap! (:state state) reset-state! (:config state))))
     (catch Exception e
-      (log/exception! e "rabbit-task"))))
+      (log/exception! e "task"))))
 
 (defn connect!
   [config]
@@ -145,7 +146,7 @@
 (defn -main
   [& args]
   (try
-    (log/info! "sisyphus rises" log/gce-instance-name "...")
+    (log/info! "sisyphus rises:" log/gce-instance-name)
     (let [path "resources/config/sisyphus.clj"
           config (read-path path)
           state (start! config)]

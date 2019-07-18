@@ -122,17 +122,14 @@
 
 (defn status!
   [kafka task status message]
-  (log/notice! status message)
   (send! kafka task status message :status-topic))
 
 (defn error!
   [kafka task status message]
-  (log/error! status message)
   (send! kafka task status message :status-topic))
 
 (defn exception!
   [kafka task status message throwable]
-  (log/exception! throwable status)
   (send!
    kafka task status
    (assoc message :exception (.toString throwable)) :status-topic))
@@ -149,7 +146,10 @@
           inputs (find-locals! (str root "/inputs") (:inputs task))
           outputs (find-locals! (str root "/outputs") (:outputs task))
 
-          tag (str log/gce-instance-name "." (:name task "no-name"))
+          workflow-name (:root task "no-workflow")
+          task-name (:name task "no-name")
+          tag (str log/gce-instance-name "." workflow-name "." task-name)
+
           image (:image task)
           ;; commands (join-commands (:commands task))
           commands (first-command (:commands task))]
@@ -170,6 +170,7 @@
             id (docker/create! docker config)
             lines (atom [])]
 
+        (log/info! "created container" id config)
         (status! kafka task "container-create" {:docker-id id :docker-config config})
         (swap! state assoc-in [:task :docker-id] id)
 
@@ -187,13 +188,14 @@
           :status (.toString (docker/info docker id))})
 
         (let [code (docker/exit-code (docker/info docker id))]
+          (log/log! (if (zero? code) log/notice log/error) "container exit code" code)
           (status! kafka task "container-exit" {:docker-id id :code code})
 
           (if (> code 0)
             (error!
              kafka task "process-error"
              {:code code
-              :log @lines}) ; TODO(jerry): Don't re-log the lines, to reduce confusion.
+              :log @lines})
 
             (doseq [output outputs]
               (push-output! storage output)
@@ -207,4 +209,5 @@
         (status! kafka task "process-complete" {})))
 
     (catch Exception e
+      (log/exception! e "task-error")
       (exception! kafka task "task-error" {:message (.getMessage e)} e))))
