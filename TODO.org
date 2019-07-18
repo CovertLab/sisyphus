@@ -24,8 +24,7 @@
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
-** wcm.py: provide a means to upload directory trees to storage from client
-** wcm.py: show what is going to be run, then accept confirmation (with option to force)
+** wcm.py: provide a means to upload directory trees to storage from client [is gcsfuse sufficient? it needs the --implicit-dirs flag until we make sisyphus create the subdirs]
 ** wcm.py: enable the ability to do parts of the workflow (parca, sim, analysis), as well as all at once
 ** standardize gaia API
 ** clean up each workflow run when done
@@ -134,3 +133,4 @@
 ** (Ryan: validating) the queue needs to be robust to task failures; don't rerun them unless that has a reasonable chance of working and there's a max number of retries; the rabbit interaction is failing on error in sisyphus
 ** (Ryan: investigating) Gaia.trigger() doesn't start the workflow unless workers are good and ready
 ** (Ryan: investigating) is it necessary to have running workers before flow.trigger() will work?
+** wcm.py: show what is going to be run, then accept confirmation (with option to force) -> run it with --dump to write workflow-commands.json and workflow-steps.json instead of sending them to the Gaia workflow server. you can then look them over and either manually upload those files via the gaia client or do wcm.py again without the arg
