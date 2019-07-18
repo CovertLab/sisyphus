@@ -134,6 +134,12 @@
    kafka task status
    (assoc message :exception (.toString throwable)) :status-topic))
 
+(defn task-tag
+  [task]
+  (let [workflow-name (:root task "no-workflow")
+        task-name (:name task "no-name")]
+    (str log/gce-instance-name "_" workflow-name "_" task-name)))
+
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
    execute the task specified by the given `task` map, downloading all inputs from cloud
@@ -146,67 +152,66 @@
           inputs (find-locals! (str root "/inputs") (:inputs task))
           outputs (find-locals! (str root "/outputs") (:outputs task))
 
-          workflow-name (:root task "no-workflow")
-          task-name (:name task "no-name")
-          tag (str log/gce-instance-name "." workflow-name "." task-name)
-
           image (:image task)
           ;; commands (join-commands (:commands task))
           commands (first-command (:commands task))]
 
-      (log/info! "pull" image "for" tag) ; TODO(jerry): (log/tag tag ...)
-      (docker/pull! docker image)
+      (log/tag
+       (task-tag task)
+       (fn []
+         (log/info! "pull" image)
+         (docker/pull! docker image)
 
-      (doseq [input inputs]
-        (pull-input! storage input))
+         (doseq [input inputs]
+           (pull-input! storage input))
 
-      (let [mounts (mount-map (concat inputs outputs) :local :internal)
-            config {:image image
-                    ;; TODO: get sisyphus user to work in docker container
-                    ;; :user user
-                    :mounts mounts
-                    :command commands}
+         (let [mounts (mount-map (concat inputs outputs) :local :internal)
+               config {:image image
+                       ;; TODO: get sisyphus user to work in docker container
+                       ;; :user user
+                       :mounts mounts
+                       :command commands}
 
-            id (docker/create! docker config)
-            lines (atom [])]
+               id (docker/create! docker config)
+               lines (atom [])]
 
-        (log/info! "created container" id config)
-        (status! kafka task "container-create" {:docker-id id :docker-config config})
-        (swap! state assoc-in [:task :docker-id] id)
+           (log/info! "created container" id config)
+           (status! kafka task "container-create" {:docker-id id :docker-config config})
+           (swap! state assoc-in [:task :docker-id] id)
 
-        (status! kafka task "execution-start" {:docker-id id})
-        (docker/start! docker id)
+           (status! kafka task "execution-start" {:docker-id id})
+           (docker/start! docker id)
 
-        (doseq [line (docker/logs docker id)]
-          (swap! lines conj line)
-          (log/info! line)) ; TODO(jerry): Detect stack tracebacks heuristically;
-            ; join those lines into one message and log as error!
+           (doseq [line (docker/logs docker id)]
+             (swap! lines conj line)
+             (log/info! line)) ; TODO(jerry): Detect stack tracebacks heuristically;
+           ; join those lines into one message and log as error!
 
-        (status!
-         kafka task "execution-complete"
-         {:docker-id id
-          :status (.toString (docker/info docker id))})
+           (status!
+            kafka task "execution-complete"
+            {:docker-id id
+             :status (.toString (docker/info docker id))})
 
-        (let [code (docker/exit-code (docker/info docker id))]
-          (log/log! (if (zero? code) log/notice log/error) "container exit code" code)
-          (status! kafka task "container-exit" {:docker-id id :code code})
+           (let [code (docker/exit-code (docker/info docker id))]
+             (log/log! (if (zero? code) log/notice log/error) "container exit code" code)
+             (status! kafka task "container-exit" {:docker-id id :code code})
 
-          (if (> code 0)
-            (error!
-             kafka task "process-error"
-             {:code code
-              :log @lines})
+             (if (> code 0)
+               (error!
+                kafka task "process-error"
+                {:code code
+                 :log @lines})
 
-            (doseq [output outputs]
-              (push-output! storage output)
+               (doseq [output outputs]
+                 (push-output! storage output)
 
-              (status!
-               kafka task "data-complete"
-               {:root (:root task)
-                :path (:key output)
-                :key (str (:bucket output) ":" (:key output))}))))
+                 (status!
+                  kafka task "data-complete"
+                  {:root (:root task)
+                   :path (:key output)
+                   :key (str (:bucket output) ":" (:key output))}))))
 
-        (status! kafka task "process-complete" {})))
+           (status! kafka task "process-complete" {})))))
 
     (catch Exception e
       (log/exception! e "task-error")
