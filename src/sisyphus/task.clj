@@ -138,7 +138,7 @@
   [task]
   (let [workflow-name (:root task "no-workflow")
         task-name (:name task "no-name")]
-    (str log/gce-instance-name "_" workflow-name "_" task-name)))
+    (str log/gce-instance-name "." workflow-name "." task-name)))
 
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
