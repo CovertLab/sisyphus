@@ -199,7 +199,7 @@
 
              (if (> code 0)
                (error!
-                kafka task "process-error"
+                kafka task "step-error"
                 {:code code
                  :log @lines})
 
@@ -212,7 +212,7 @@
                    :path (:key output)
                    :key (str (:bucket output) ":" (:key output))}))))
 
-           (status! kafka task "process-complete" {})))))
+           (status! kafka task "step-complete" {})))))
 
     (catch Exception e
       (log/exception! e "task-error")
