@@ -27,11 +27,16 @@
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
+** show what is going to be run, then accept confirmation (with option to force)
+** provide a means to upload directory trees to storage from client
+** wcm.py: enable the ability to do parts of the workflow (parca, sim, analysis), as well as all at once
 ** standardize gaia API
 ** clean up each workflow run when done
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
 * logs (for now, the logs are the UI)
+** dump logs for a single run in bucket alongside results?
+** when looking at gaia workflow status from the client, provide means to filter tasks/data etc
 ** figure out how to filter viewing by workflow name or user or task. Which LogEntry fields are most useful for that? log name? log "tag" label? .setOperation() [ID, producer]? setSourceLocation() esp. for stack traces?
 *** log a sequence of docker output lines as a batch (mainly an optimization but it could reduce log interleaving between tasks)
 *** support JsonPayload in the stackdriver API for logging structured records?
