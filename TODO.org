@@ -10,6 +10,7 @@
 *** trigger --> run
 *** expire  --> expire
 *** ??? --> ???
+*** (jerry) update wcm & demo workflows for 1-command and rename local -> internal
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. [Workaround: The write-json task now waits for parca output just so its worker node won't time out waiting for more work to do.] Maybe workers should stick around while runs (or their run) are running, or maybe we should just auto-start more of them on demand and make them start up faster.
 *** auto-launch and shutdown workers, probably mediated by Gaia. Either accept a worker count from the workflow builder for speed and adjustability or react to the queue length to be more automatic. [Low priority since the WCM builder now does it.]
@@ -27,6 +28,9 @@
 ** wcm.py: provide a means to upload directory trees to storage from client [is gcsfuse sufficient? it needs the --implicit-dirs flag until we make sisyphus create the subdirs]
 ** wcm.py: enable the ability to do parts of the workflow (parca, sim, analysis), as well as all at once
 ** standardize gaia API
+*** add argument checking assertions, #type: type specs, and docstrings
+*** unify the gaia client and wcEcoli worker-launch code
+** enable multiple classes of workers with GCE instance templates, separate rabbit queues, and workflow (steps or commands?) to specify needed classes
 ** clean up each workflow run when done
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
