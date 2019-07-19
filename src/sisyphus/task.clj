@@ -116,7 +116,7 @@
     (get-in kafka [:config topic])
     (merge
      {:id (:id task)
-      :root (:root task)
+      :workflow (:workflow task)
       :event status}
      message))))
 
@@ -136,7 +136,7 @@
 
 (defn task-tag
   [task]
-  (let [workflow-name (:root task "no-workflow")
+  (let [workflow-name (:workflow task "no-workflow")
         task-name (:name task "no-name")]
     (str log/gce-instance-name "." workflow-name "." task-name)))
 
@@ -154,7 +154,8 @@
 
           image (:image task)
           ;; commands (join-commands (:commands task))
-          commands (first-command (:commands task))]
+
+          command (or (:command task) (first-command (:commands task)))]
 
       (log/tag
        (task-tag task)
@@ -170,7 +171,7 @@
                        ;; TODO: get sisyphus user to work in docker container
                        ;; :user user
                        :mounts mounts
-                       :command commands}
+                       :command command}
 
                id (docker/create! docker config)
                lines (atom [])]
@@ -198,7 +199,7 @@
 
              (if (> code 0)
                (error!
-                kafka task "process-error"
+                kafka task "step-error"
                 {:code code
                  :log @lines})
 
@@ -207,11 +208,11 @@
 
                  (status!
                   kafka task "data-complete"
-                  {:root (:root task)
+                  {:workflow (:workflow task)
                    :path (:key output)
                    :key (str (:bucket output) ":" (:key output))}))))
 
-           (status! kafka task "process-complete" {})))))
+           (status! kafka task "step-complete" {})))))
 
     (catch Exception e
       (log/exception! e "task-error")

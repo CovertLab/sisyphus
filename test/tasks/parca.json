@@ -2,9 +2,8 @@
  "inputs": {},
  "outputs": {
    "sisyphus:data/wcm/over/parca-out": "/wcEcoli/out/parca/kb/"},
- "commands": [{
-   "command": [
-     "python",
-     "-u",
-     "runscripts/manual/runParca.py",
-     "parca"]}]}
+ "command": [
+   "python",
+   "-u",
+   "runscripts/manual/runParca.py",
+   "parca"]}

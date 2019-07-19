@@ -4,9 +4,8 @@
  "outputs": {
    "sisyphus:data/wcm/over/metadata": "/wcEcoli/out/sim/metadata/",
    "sisyphus:data/wcm/over/sim-out": "/wcEcoli/out/sim/wildtype_000000/"},
- "commands": [{
-   "command": [
-     "python",
-     "-u",
-     "runscripts/manual/runSim.py",
-     "sim"]}]}
+ "command": [
+   "python",
+   "-u",
+   "runscripts/manual/runSim.py",
+   "sim"]}

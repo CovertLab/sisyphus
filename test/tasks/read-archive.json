@@ -3,8 +3,7 @@
    "sisyphus:data/test/archive": "/wcEcoli/later/"},
  "outputs": {
    "sisyphus:data/test/agent-list": "/wcEcoli/agent-list"},
- "commands": [{
-   "command": [
-     "ls",
-     "-lach"],
-   "stdout": "/wcEcoli/agent-list"}]}
+ "command": [
+   "ls",
+   "-lach"],
+ "stdout": "/wcEcoli/agent-list"}

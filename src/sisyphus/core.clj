@@ -57,7 +57,7 @@
       (when (terminate? message id)
         (docker/kill! (:docker state) docker-id)
         (log/notice! "task terminated")
-        (task/status! (:kafka state) task "process-terminated" message)
+        (task/status! (:kafka state) task "step-terminated" message)
         (swap! (:state state) assoc :status :waiting :task {}))
       (catch Exception e
         (log/exception! e "TERMINATION FAILED")))))

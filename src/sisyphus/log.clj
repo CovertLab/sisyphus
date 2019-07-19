@@ -48,8 +48,6 @@
 
 (defn tag
   "Call f in a context of a named logger."
-  ; TODO(jerry): Call this at the top level with the server instance name
-  ;  (core/signature), also for each perform-task! with the workflow + task name.
   [name f]
   (binding [*logger* (make-logger name)]
     (f)))
