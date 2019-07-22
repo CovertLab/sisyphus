@@ -18,19 +18,19 @@ In order to use cloud storage and GCR you have to authorize with google. This me
 
 ## storage
 
-There are three distinct levels of paths that need to be distinguished:
+There are three types of pathnames in use:
 
-* remote - anything that lives in the object store.
-* local - anything on the system that is running a Sisyphus node.
-* internal - anything inside the docker container.
+* remote - files in the object store.
+* local - files on the system that is running a Sisyphus node.
+* internal - files inside the docker container.
 
-Sisyphus pulls inputs down from the object store to the local system, then maps a volume from that local path into a specified path internal to the container that is actually going to run the code. Once it is complete, a reverse mapping takes outputs from internal paths and maps them to local paths, which are then uploaded back into the remote object store. This is the full round trip of a single task being executed and has the ultimate effect of operating on objects in an object store and adding the results back as new objects into that same store.
+Sisyphus pulls inputs down from the object store to the local system, then maps a volume from that local path into a specified path internal to the container that is actually going to run the code. Once the code finishes, a reverse mapping takes outputs from internal paths and maps them to local paths, which are then uploaded back into the remote object store. This is the full round trip of a single task being executed and has the ultimate effect of operating on objects in an object store and adding the results back as new objects into that same store.
 
 In general, clients of Sisyphus only really need to be aware of remote and internal paths. Local paths are managed entirely by Sisyphus, but it is good to know that this intermediate layer exists. 
 
 ## task documents
 
-Each task is represented by a task document. This document details the command that will be run, the image it will be run with, any inputs the command needs to run, and any outputs we want to record later. Here is an example document:
+Each task to run is represented by a task document in JSON format. This document details the command that will be run, the image it will be run with, any inputs the command needs to run, and any outputs we want to record later. Here is an example document:
 
 ```js
 {"image": "alpine:latest",
@@ -38,19 +38,19 @@ Each task is represented by a task document. This document details the command t
    "sisyphus:data/clear": "/mnt/clear"},
  "outputs": {
    "sisyphus:data/crypt": "/mnt/crypt"},
- "commands": [{
-   "command": [
+ "command": [
      "md5sum",
      "/mnt/clear"],
-   "stdout": "/mnt/crypt"}]}
+ "stdout": "/mnt/crypt"}
 ```
 
-There are four keys:
+The map keys are:
 
 * `image` - what docker image to use for this command.
-* `inputs` - map of `bucket:remote/path` to `/internal/container/path`, for copying down files from the object store and knowing where to bind them inside the container.
-* `outputs` - same as inputs, but opposite, so a map of object store paths `bucket:remote/path` where any files at the original internal path '/internal/container/path' will be uploaded to once execution is complete.
-* `commands` - a list of commands, each one with a `command` key (an array of command tokens) and keys for `stdout`, `stdin` and `stderr` with internal paths, if required.
+* `inputs` - map of `bucketname:remote/path` to `/internal/container/path` for copying down files from the object store and knowing where to bind them inside the container.
+* `outputs` - same as inputs, but opposite, so a map of object store paths `bucket:remote/path` where any files at the original internal path `/internal/container/path` will be uploaded to once execution is complete.
+* `commands` - a command to run, expressed as an array of token strings.
+* `stdout`, `stdin` and `stderr` with internal paths, if required.
 
 ## triggering execution
 
