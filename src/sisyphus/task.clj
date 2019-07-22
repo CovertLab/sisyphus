@@ -21,12 +21,16 @@
         colon (.indexOf full-key ":")]
     [(.substring full-key 0 colon) (.substring full-key (inc colon))]))
 
+(def stdout-token
+  "STDOUT")
+
 (defn find-local!
   [root [remote internal]]
   (let [[bucket key] (split-key remote)
         input (io/file root key)
         local (.getAbsolutePath input)
         archive (str local ".tar.gz")
+        stdout? (= internal stdout-token)
         directory? (archive/directory-path? internal)
         intern (archive/trim-slash internal)]
     (try
@@ -42,6 +46,7 @@
      :key key
      :archive archive
      :local local
+     :stdout? stdout?
      :directory? directory?
      :internal intern}))
 
@@ -166,7 +171,8 @@
          (doseq [input inputs]
            (pull-input! storage input))
 
-         (let [mounts (mount-map (concat inputs outputs) :local :internal)
+         (let [mounted (concat inputs (remove :stdout? outputs))
+               mounts (mount-map mounted :local :internal)
                config {:image image
                        ;; TODO: get sisyphus user to work in docker container
                        ;; :user user
@@ -204,6 +210,10 @@
                  :log @lines})
 
                (doseq [output outputs]
+                 (if (:stdout? output)
+                   (let [stdout (string/join "\n" @lines)]
+                     (spit (:local output) stdout)))
+
                  (push-output! storage output)
 
                  (status!
