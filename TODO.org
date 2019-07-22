@@ -10,12 +10,16 @@
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
+** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry
+** (jerry) make the "task complete" log entry responsive to whether the task success ("task succeeded" or "task failed") so it doesn't mislead people with "task complete" on failure
 ** service account setup; see https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances : recommends creating a new service account (like "sisyphus") rather than using the Compute Engine default service account; giving it the https://www.googleapis.com/auth/cloud-platform scope; and configuring the instance to run as that service account. Needed for Stackdriver? Presumably we can configure all scopes this way without environment vars.
-** create intermediate directory entries in object store for nested keys (it is still needed for gcsfuse; the web console browser doesn't need it)
+** create intermediate directories in GCS for nested keys (needed for gcsfuse; not needed for the web console browser)
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
-** wcm.py: provide a means to upload directory trees to storage from client [is gcsfuse sufficient? it needs the --implicit-dirs flag until we make sisyphus create the subdirs]
+** (jerry) log a clear message when a workflow completes or stalls
+*** why does workflow = :what in sync/data-complete! ?
+** wcm.py: provide a means to upload directory trees to storage from client [is gcsfuse sufficient? it needs the --implicit-dirs flag until we make sisyphus create the dirs]
 ** wcm.py: enable the ability to do parts of the workflow (parca, sim, analysis), as well as all at once
 ** standardize gaia API
 *** add argument checking assertions, #type: type specs, and docstrings
@@ -32,9 +36,8 @@
 *** support JsonPayload in the stackdriver API for logging structured records?
 *** also try stackdriver debugger, load trace & profiler, dashboards
 ** when the app in-container prints a stack trace, get that into one log entry for readability (even if it's a heurstic aggregation) and set the log level to severe
-** preserve indentation whitespace in docker app run output lines. is it only TABs that don't work like parca's output "wrote\n\t /wcEcoli/out/wf/kb/rawData.cPickle ..."?
+** preserve indentation whitespace in Logs Viewer? is it only leading TABs that don't show up in the collapsed view, e.g. parca's output "wrote\n\t /wcEcoli/out/wf/kb/rawData.cPickle ..."?
 ** store a persistant log of high level info plus error messages, esp. for CI runs
-** (jerry) remove kafka-based logging from gaia client [needs testing], ssh-tunnel.sh, sisyphus [done except for removing :log-topic from config.clj], and gaia [none]
 ** design Gaia and Sisyphus logs to be more informative, less cluttered, easier to filter, and easier to read
 ** clearly label the action for every log entry
 ** (jerry) design the content of each message, e.g.
@@ -138,3 +141,4 @@
 *** trigger --> run
 *** expire  --> expire
 *** ??? --> ???
+** (jerry) remove kafka-based logging from gaia client, ssh-tunnel.sh, sisyphus, and gaia

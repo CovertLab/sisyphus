@@ -124,10 +124,6 @@
   [kafka task status message]
   (send! kafka task status message :status-topic))
 
-(defn error!
-  [kafka task status message]
-  (send! kafka task status message :status-topic))
-
 (defn exception!
   [kafka task status message throwable]
   (send!
@@ -198,7 +194,7 @@
              (status! kafka task "container-exit" {:docker-id id :code code})
 
              (if (> code 0)
-               (error!
+               (status!
                 kafka task "step-error"
                 {:code code
                  :log @lines})
