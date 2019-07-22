@@ -200,7 +200,7 @@
              (status! kafka task "container-exit" {:docker-id id :code code})
 
              (if (> code 0)
-               (error!
+               (status!
                 kafka task "step-error"
                 {:code code
                  :log @lines})
