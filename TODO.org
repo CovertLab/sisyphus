@@ -9,6 +9,7 @@
 *** (compare cloud shell to a gateway GCE instance)
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
+** (Ryan) handle task cancel when container hasn't started yet
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
 ** fill out the error handling and recovery, e.g. don't use deprecated GCS methods that can't retry
 ** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry

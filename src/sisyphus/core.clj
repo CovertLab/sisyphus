@@ -53,6 +53,7 @@
   (let [task (:task @(:state state))
         {:keys [id docker-id]}
         (select-keys task [:id :docker-id])]
+    (log/debug! "received termination for" id)
     (try
       (when (terminate? message id)
         (log/debug! "terminating step")
