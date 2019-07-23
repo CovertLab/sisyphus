@@ -58,7 +58,8 @@
    (:exchange rabbit)
    (:routing-key rabbit)
    (json/generate-string message)
-   {:content-type "text/plain"}))
+   {:content-type "text/plain"
+    :peristent true}))
 
 (defn close!
   "Close the connection represented by the given rabbitmq connection map."
