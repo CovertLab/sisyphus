@@ -169,7 +169,8 @@
 
 (defn kill!
   [docker id]
-  (.killContainer docker id))
+  (when id
+    (.killContainer docker id)))
 
 (defn remove!
   [docker id]

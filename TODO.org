@@ -5,8 +5,8 @@
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. [Workaround: The write-json task now waits for parca output just so its worker node won't time out waiting for more work to do.] Maybe workers should stick around while runs (or their run) are running, or maybe we should just auto-start more of them on demand and make them start up faster.
 *** auto-launch and shutdown workers, probably mediated by Gaia. Either accept a worker count from the workflow builder for speed and adjustability or react to the queue length to be more automatic. [Low priority since the WCM builder now does it.]
 ** is the gateway machine obsolete now that the workflow builder can connect to gaia-base and zookeeper-prime?
-*** do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?
-*** compare cloud shell to a gateway GCE instance
+*** (do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?)
+*** (compare cloud shell to a gateway GCE instance)
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
@@ -14,39 +14,31 @@
 ** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry
 ** service account setup; see https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances : recommends creating a new service account (like "sisyphus") rather than using the Compute Engine default service account; giving it the https://www.googleapis.com/auth/cloud-platform scope; and configuring the instance to run as that service account. Needed for Stackdriver? Presumably we can configure all scopes this way without environment vars.
 ** create intermediate directories in GCS for nested keys (needed for gcsfuse; not needed for the web console browser)
-** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
+** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely) (the workflow builder rejects them early)
 ** auto-create the output bucket?
 * gaia
-*** why does workflow = :what in sync/data-complete! ?
 ** wcm.py: provide a means to upload directory trees to storage from client [is gcsfuse sufficient? it needs the --implicit-dirs flag until we make sisyphus create the dirs]
-** wcm.py: enable the ability to do parts of the workflow (parca, sim, analysis), as well as all at once
+** wcm.py: enable the ability to do parts of the workflow (parca, sim, analysis), as well as all at once: you can set --run_analysis=0 or --generations=0. is that sufficient? to queue up sims and analysis but block them requires some trick like making them depend on a file that nothing writes, then manually creating the files, then calling Gaia.run()? or a web UI.
 ** standardize gaia API
-*** add argument checking assertions, #type: type specs, and docstrings
 *** unify the gaia client and wcEcoli worker-launch code
 ** enable multiple classes of workers with GCE instance templates, separate rabbit queues, and workflow (steps or commands?) to specify needed classes
 ** clean up each workflow run when done
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
 * logs (for now, the logs are the UI)
-** dump logs for a single run in bucket alongside results?
+** store a persistent log of high level info plus error messages, esp. for CI runs; or save stdout+stderr from all steps; or dump logs for a single run in bucket alongside results
 ** when looking at gaia workflow status from the client, provide means to filter tasks/data etc
-** figure out how to filter viewing by workflow name or user or task. Which LogEntry fields are most useful for that? log name? log "tag" label? .setOperation() [ID, producer]? setSourceLocation() esp. for stack traces?
+** figure out how to filter viewing by workflow name or user or task. Which LogEntry fields are most useful for that? log name? log "tag" label? .setOperation() [ID, producer]? setSourceLocation() esp. for stack traces? gaia and sisyphus now set several of these
 *** log a sequence of docker output lines as a batch (mainly an optimization but it could reduce log interleaving between tasks)
 *** support JsonPayload in the stackdriver API for logging structured records?
 *** also try stackdriver debugger, load trace & profiler, dashboards
 ** when the app in-container prints a stack trace, get that into one log entry for readability (even if it's a heurstic aggregation) and set the log level to severe
-** preserve indentation whitespace in Logs Viewer? is it only leading TABs that don't show up in the collapsed view, e.g. parca's output "wrote\n\t /wcEcoli/out/wf/kb/rawData.cPickle ..."?
-** store a persistant log of high level info plus error messages, esp. for CI runs
 ** design Gaia and Sisyphus logs to be more informative, less cluttered, easier to filter, and easier to read
 ** clearly label the action for every log entry
 ** (jerry) design the content of each message, e.g.
 *** sisyphus-status: {u'status': u'create', u'docker-id': u'8441243d6973', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5', u'docker-config': {u'mounts': {u'/tmp/sisyphus/outputs/data/jerry/20190701.110950/kb': u'/wcEcoli/out/wf/kb'}, u'image': u'gcr.io/allen-discovery-center-mcovert/jerry-wcm-code:latest', u'command': [u'sh', u'-c', u'python -u -m wholecell.fireworks.runTask parca \'{"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}\'']}}
 **** should be more like
 *** worker sisyphus-b: python -u -m wholecell.fireworks.runTask parca {"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}
-**** and
-*** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'}
-**** should be more like
-*** worker sisyphus-b: Fitting RNA synthesis probabilities.
 ** remove internal debugging messages
 ** label each message for its purpose
 ** remove the u'text' clutter
@@ -144,3 +136,6 @@
 ** (jerry) make the "task complete" log entry responsive to whether the task success ("task succeeded" or "task failed") so it doesn't mislead people with "task complete" on failure
 ** (jerry) log a clear message when a workflow completes or stalls
 ** clarify logs for worker termination vs. step termination vs. step completion
+*** add argument checking assertions, #type: type specs, and docstrings
+** preserve indentation whitespace in Logs Viewer? --> leading whitespace doesn't show up in the collapsed view, e.g. parca's output "wrote\n\t /wcEcoli/out/wf/kb/rawData.cPickle ..."
+*** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'} should be more like worker sisyphus-b: Fitting RNA synthesis probabilities.
