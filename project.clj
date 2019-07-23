@@ -1,4 +1,4 @@
-(defproject sisyphus "0.0.10"
+(defproject sisyphus "0.0.11"
   :description "Eternally execute tasks"
   :url "http://github.com/CovertLab/sisyphus"
   :license {:name "MIT License"
