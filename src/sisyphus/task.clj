@@ -218,8 +218,9 @@
                    :path (:key output)
                    :key (str (:bucket output) ":" (:key output))}))))
 
+           (log/notice! "STEP COMPLETED" task)
            (status! kafka task "step-complete" {})))))
 
     (catch Exception e
-      (log/exception! e "task-error")
+      (log/exception! e "STEP FAILED")
       (exception! kafka task "task-error" {:message (.getMessage e)} e))))

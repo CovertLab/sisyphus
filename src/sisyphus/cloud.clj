@@ -5,7 +5,7 @@
   (:import
    [java.io File FileInputStream]
    [com.google.cloud.storage
-    Storage StorageOptions
+    Storage StorageOptions StorageException
     Storage$BlobListOption
     Storage$BlobWriteOption
     Bucket BucketInfo
@@ -44,11 +44,11 @@
 
 (defn upload!
   "Upload the file at the given local filesystem path to the cloud storage bucket and key."
-  ([storage bucket key path]
+  ([^Storage storage bucket key path]
    (upload! storage bucket key path {:content-type default-content-type}))
   ([storage bucket key path {:keys [content-type]}]
    (try
-     (let [blob-id (BlobId/of bucket key)
+     (let [blob-id ^BlobId (BlobId/of bucket key)
            builder (BlobInfo/newBuilder blob-id)
            blob-info (.build
                       (.setContentType
@@ -56,9 +56,9 @@
                        (or content-type default-content-type)))
            options (make-array Storage$BlobWriteOption 0)
            stream (FileInputStream. (.toFile (get-path path)))]
-       (.create storage blob-info stream options)
+       (.create storage blob-info stream options)  ; TODO(jerry): "This method is marked as Deprecated because it cannot safely retry, given that it accepts an InputStream which can only be consumed once."
        blob-info)
-     (catch Exception e
+     (catch StorageException e
        (log/exception! e "failed to upload" path "to" (str bucket ":" key))))))
 
 (defn find-subpath
@@ -79,15 +79,19 @@
 
 (defn download!
   "Download from the cloud storage bucket and key to the provided path."
-  [storage bucket key path]
-  (let [blob-id (BlobId/of bucket key)
-        blob (.get storage blob-id)
+  [^Storage storage bucket key path]
+  (let [blob-id ^BlobId (BlobId/of bucket key)
+        blob ^Blob (.get storage blob-id)
         file (io/file path)
-        base (io/file (.getParent file))]
+        base (io/file (.getParent file))
+        remote-path (str bucket ":" key)]
     (.mkdirs base)
     (if blob
-      (.downloadTo blob (get-path path))
-      (log/error! "failed to download" (str bucket ":" key)))))
+      (try
+        (.downloadTo blob (get-path path))  ; TODO(jerry): "This method is replaced with downloadTo(Path, BlobSourceOption...), but is kept here for binary compatibility with the older versions of the client library."
+        (catch StorageException e
+          (log/exception! e "failed to download" remote-path "to" path)))
+      (log/error! "file unavailable to download" remote-path))))
 
 (defn directory-options
   [directory]

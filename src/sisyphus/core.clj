@@ -20,7 +20,7 @@
   []
   (try
     (let [self log/gce-instance-name]
-      (log/info! "sisyphus terminating" self)
+      (log/info! "sisyphus worker shutting down" self)
       (log/info!
        (sh/sh
         "/snap/bin/gcloud"
@@ -33,7 +33,7 @@
         log/gce-zone))
       (System/exit 0))
     (catch Exception e
-      (log/exception! e "terminating"))))
+      (log/exception! e "shutting down"))))
 
 (defn timer
   [wait f]
@@ -55,12 +55,13 @@
         (select-keys task [:id :docker-id])]
     (try
       (when (terminate? message id)
+        (log/debug! "terminating step")
         (docker/kill! (:docker state) docker-id)
-        (log/notice! "task terminated")
+        (log/notice! "STEP TERMINATED BY REQUEST")
         (task/status! (:kafka state) task "step-terminated" message)
         (swap! (:state state) assoc :status :waiting :task {}))
       (catch Exception e
-        (log/exception! e "TERMINATION FAILED")))))
+        (log/exception! e "STEP TERMINATION FAILED")))))
 
 (defn apoptosis-timer
   [delay]
@@ -84,20 +85,19 @@
    :status :waiting))
 
 (defn sisyphus-handle-rabbit
-  "Handle an incoming task message by performing the task it represents."
+  "Handle an incoming task message by running the requested step."
   [state channel metadata ^bytes payload]
   (try
     (let [raw (String. payload "UTF-8")
           task (json/parse-string raw true)]
-      (log/notice! "task start" task)
+      (log/notice! "STARTING STEP" task)
       (do
         (swap! (:state state) run-state! task)
         (task/perform-task! state task)
-        (log/notice! "task complete" task)
         (langohr/ack channel (:delivery-tag metadata))
         (swap! (:state state) reset-state! (:config state))))
     (catch Exception e
-      (log/exception! e "task"))))
+      (log/exception! e "step"))))
 
 (defn connect!
   [config]

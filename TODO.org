@@ -10,14 +10,13 @@
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
+** fill out the error handling and recovery, e.g. don't use deprecated GCS methods that can't retry
 ** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry
-** (jerry) make the "task complete" log entry responsive to whether the task success ("task succeeded" or "task failed") so it doesn't mislead people with "task complete" on failure
 ** service account setup; see https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances : recommends creating a new service account (like "sisyphus") rather than using the Compute Engine default service account; giving it the https://www.googleapis.com/auth/cloud-platform scope; and configuring the instance to run as that service account. Needed for Stackdriver? Presumably we can configure all scopes this way without environment vars.
 ** create intermediate directories in GCS for nested keys (needed for gcsfuse; not needed for the web console browser)
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely)
 ** auto-create the output bucket?
 * gaia
-** (jerry) log a clear message when a workflow completes or stalls
 *** why does workflow = :what in sync/data-complete! ?
 ** wcm.py: provide a means to upload directory trees to storage from client [is gcsfuse sufficient? it needs the --implicit-dirs flag until we make sisyphus create the dirs]
 ** wcm.py: enable the ability to do parts of the workflow (parca, sim, analysis), as well as all at once
@@ -142,3 +141,6 @@
 *** expire  --> expire
 *** ??? --> ???
 ** (jerry) remove kafka-based logging from gaia client, ssh-tunnel.sh, sisyphus, and gaia
+** (jerry) make the "task complete" log entry responsive to whether the task success ("task succeeded" or "task failed") so it doesn't mislead people with "task complete" on failure
+** (jerry) log a clear message when a workflow completes or stalls
+** clarify logs for worker termination vs. step termination vs. step completion

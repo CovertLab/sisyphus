@@ -81,12 +81,12 @@
 (defn -main
   [& args]
   (try
-    (log/fine! "rabbbbbbbbbbit")
+    (log/debug! "rabbbbbbbbbbit")
     (let [rabbit (connect! {})
           consumer (start-consumer! rabbit default-handle-message)
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]
                      (close! rabbit)
-                     (log/fine! "(disappears into hole)")))]
+                     (log/debug! "(disappears into hole)")))]
       (sun.misc.Signal/handle (sun.misc.Signal. "INT") signal)
       @(promise))))

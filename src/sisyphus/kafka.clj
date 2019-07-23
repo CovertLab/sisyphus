@@ -49,7 +49,7 @@
             (let [value {topic (:value message)}]
               (handle topic (:value message)))))))
     (catch Exception e
-      (log/exception! e "kafka-handle-message"))))
+      (log/exception! e "kafka/handle-message"))))
 
 (defn consume
   [consumer handle]
@@ -58,7 +58,7 @@
            (try
              (kafka/poll! consumer poll-interval)
              (catch Exception e
-               (log/exception! e "kafka-consume")))]
+               (log/exception! e "kafka/consume")))]
       (when-not (empty? records)
         (doseq [record records]
           (handle record)))
