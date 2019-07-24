@@ -11,6 +11,7 @@
 ** (Ryan) handle task cancel when container hasn't started yet (kill the container once it loads, if it does?)
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
 ** fill out the error handling and recovery, e.g. don't use deprecated GCS methods that can't retry
+*** make sisyphus-handle-rabbit use try/finally to ensure it ACKs to rabbit and resets its task state on exception?
 ** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry
 ** service account setup; see https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances : recommends creating a new service account (like "sisyphus") rather than using the Compute Engine default service account; giving it the https://www.googleapis.com/auth/cloud-platform scope; and configuring the instance to run as that service account. Needed for Stackdriver? Presumably we can configure all scopes this way without environment vars.
 ** create intermediate directories in GCS for nested keys (needed for gcsfuse; not needed for the web console browser)
