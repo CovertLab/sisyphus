@@ -8,7 +8,7 @@
 *** (compare cloud shell to a gateway GCE instance)
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
-** (Ryan) handle task cancel when container hasn't started yet
+** (Ryan) handle task cancel when container hasn't started yet (kill the container once it loads, if it does?)
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
 ** fill out the error handling and recovery, e.g. don't use deprecated GCS methods that can't retry
 ** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry
@@ -46,8 +46,11 @@
 * errors
 ** return the error info (e.g. there's no storage bucket named "robin1") in parseable JSON rather than causing a json-decoder-error decoding the server's response
 ** need more error detection & reporting
-*** gaia client should check arg types before sending a request to the server
 ** test what happens when things go wrong. does it emit helpful error messages? can it do self-repair?
+*** exceptions
+*** bad input: expunge a non-existant name, expunge an expunged name, commands and steps missing needed fields, steps referring to missing commands, ...
+*** cancellation at each possible juncture
+*** a server goes down at each possible juncture
 * optimization
 ** how come it takes (at least sometimes) many minutes for workers to start picking up tasks?
 ** tasks run very slowly. do we need VMs with faster CPUs? more RAM? more cores? GPUs? larger disk?
@@ -140,3 +143,4 @@
 ** preserve indentation whitespace in Logs Viewer? --> leading whitespace doesn't show up in the collapsed view, e.g. parca's output "wrote\n\t /wcEcoli/out/wf/kb/rawData.cPickle ..."
 *** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'} should be more like worker sisyphus-b: Fitting RNA synthesis probabilities.
 ** (Ryan) sometimes rabbit messages are not received by sisyphus
+*** gaia client should check arg types before sending a request to the server

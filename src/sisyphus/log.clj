@@ -28,19 +28,21 @@
 
 (defn- monitored-resource
   "Build a loggable MonitoredResource with a name-tag label."
-  [^String tag]
+  ^MonitoredResource [^String tag]
   (-> ^MonitoredResource$Builder (MonitoredResource/newBuilder "gce_instance")
       (.addLabel "tag" tag)
       (.addLabel "instance_id" gce-instance-name)
       (.addLabel "zone" gce-zone)
       .build))
 
+(def -logging
+  ^Logging (.getService (LoggingOptions/getDefaultInstance)))
+
 (defn- make-logger
-  "Make a named logger with a name-tag label."
+  "Make a named logger with a name-tag label.
+  The name must match '[-.\\w]+'; / is also OK if URL-encoded."
   [^String name]
-  ; TODO(jerry): Assert that the name matches '[-.\w]+'. / is also OK if URL-encoded.
-  {:logging ^Logging (.getService (LoggingOptions/getDefaultInstance))
-   :name name
+  {:name name
    :resource (monitored-resource name)})
 
 (def ^:dynamic *logger*
@@ -65,7 +67,7 @@
   "Log an entry."
   ; TODO(jerry): Log a sequence of entries at once from Docker output lines.
   [^Severity severity ^Payload payload]
-  (let [{:keys [logging name resource]} *logger*
+  (let [{:keys [name resource]} *logger*
         entry
         (-> ^LogEntry$Builder (LogEntry/newBuilder payload)
             (.setSeverity severity)
@@ -75,8 +77,8 @@
             ;  task uploads, downloads, and lines.
             .build)
         entries (Collections/singletonList entry)]
-    (.write logging entries (make-array Logging$WriteOption 0))
-    ; Could (.flush logging) or configure BatchingSettings.
+    (.write -logging entries (make-array Logging$WriteOption 0))
+    ; Could (.flush -logging) or configure BatchingSettings.
     ))
 
 (defn- log-string!
