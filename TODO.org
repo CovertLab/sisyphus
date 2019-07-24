@@ -1,5 +1,4 @@
 * mysteries
-** (Ryan) sometimes rabbit messages are not received by sisyphus
 * questions / considerations
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. [Workaround: The write-json task now waits for parca output just so its worker node won't time out waiting for more work to do.] Maybe workers should stick around while runs (or their run) are running, or maybe we should just auto-start more of them on demand and make them start up faster.
@@ -140,3 +139,4 @@
 *** add argument checking assertions, #type: type specs, and docstrings
 ** preserve indentation whitespace in Logs Viewer? --> leading whitespace doesn't show up in the collapsed view, e.g. parca's output "wrote\n\t /wcEcoli/out/wf/kb/rawData.cPickle ..."
 *** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'} should be more like worker sisyphus-b: Fitting RNA synthesis probabilities.
+** (Ryan) sometimes rabbit messages are not received by sisyphus
