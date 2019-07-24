@@ -145,3 +145,4 @@
 *** sisyphus-log: {u'status': u'log', u'line': u'Fitting RNA synthesis probabilities.', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5'} should be more like worker sisyphus-b: Fitting RNA synthesis probabilities.
 ** (Ryan) sometimes rabbit messages are not received by sisyphus
 *** gaia client should check arg types before sending a request to the server
+*** retry docker pull on com.spotify.docker.client.exceptions.DockerException: java.util.concurrent.ExecutionException: javax.ws.rs.ProcessingException: java.io.IOException: Connection refused

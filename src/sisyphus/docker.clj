@@ -95,10 +95,10 @@
                 (if (<= retries 0)
                   (throw e)
                   {:exception e})))]
-    (if (:exception res)
+    (if-let [e (:exception res)]
       (do
         (log/debug! "retrying" (str e))
-        (recur (dec retries) f args))
+        (recur (dec retries) f))
       (:value res))))
 
 (defn pull!
