@@ -16,6 +16,7 @@
     DockerClient$AttachParameter
     DockerClient$ExecCreateParam
     DockerClient$ExecStartParameter]
+   [com.spotify.docker.client.exceptions DockerException]
    [com.spotify.docker.client.messages
     ContainerConfig
     HostConfig]))
@@ -85,10 +86,25 @@
         (.cmd (:command config))
         (.build))))
 
+(defn docker-retry
+  "Call a function with the requested number of DockerException retries."
+  [retries f]
+  (let [res (try
+              {:value (f)}
+              (catch DockerException e
+                (if (<= retries 0)
+                  (throw e)
+                  {:exception e})))]
+    (if (:exception res)
+      (do
+        (log/debug! "retrying" (str e))
+        (recur (dec retries) f args))
+      (:value res))))
+
 (defn pull!
   "Pull the docker image given by the `image` argument."
   [docker image]
-  (docker/pull docker image))
+  (docker-retry 3 (docker/pull docker image)))
 
 (def default-options
   {:image "alpine"

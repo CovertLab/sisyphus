@@ -91,7 +91,7 @@
   (try
     (let [raw (String. payload "UTF-8")
           task (json/parse-string raw true)]
-      (log/notice! "STARTING STEP" task)
+      (log/notice! "STARTING STEP" (:name task) "for" (:workflow task) task)
       (do
         (swap! (:state state) run-state! task)
         (task/perform-task! state task)
@@ -147,7 +147,7 @@
 (defn -main
   [& args]
   (try
-    (log/info! "sisyphus rises:" log/gce-instance-name)
+    (log/info! "sisyphus worker rises:" log/gce-instance-name)
     (let [path "resources/config/sisyphus.clj"
           config (read-path path)
           state (start! config)]
