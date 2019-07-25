@@ -161,7 +161,7 @@
       (log/tag
        (task-tag task)
        (fn []
-         (log/info! "pull" image)
+         (log/info! "docker pull" image)
          (docker/pull! docker image)
 
          (doseq [input inputs]
@@ -218,7 +218,7 @@
                    :path (:key output)
                    :key (str (:bucket output) ":" (:key output))}))))
 
-           (log/notice! "STEP COMPLETED" task)
+           (log/notice! "ENDED STEP" (:workflow task) (:name task) task)
            (status! kafka task "step-complete" {})))))
 
     (catch Exception e

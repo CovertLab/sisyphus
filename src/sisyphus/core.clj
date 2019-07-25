@@ -90,7 +90,7 @@
   (try
     (let [raw (String. payload "UTF-8")
           task (json/parse-string raw true)]
-      (log/notice! "STARTING STEP" (:name task) "for" (:workflow task) task)
+      (log/notice! "STARTING STEP" (:workflow task) (:name task) task)
       (do
         (swap! (:state state) run-state! task)
         (task/perform-task! state task)
