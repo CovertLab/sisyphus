@@ -78,8 +78,8 @@
             .build)
         entries (Collections/singletonList entry)]
     (.write -logging entries (make-array Logging$WriteOption 0))
-    ; Could (.flush -logging) or configure BatchingSettings.
-    ))
+    (if (>= (.ordinal severity) (.ordinal Severity/NOTICE))
+      (.flush -logging))))
 
 (defn- log-string!
   "Log a string message."
