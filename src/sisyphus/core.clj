@@ -53,16 +53,15 @@
   (let [task (:task @(:state state))
         {:keys [id docker-id]}
         (select-keys task [:id :docker-id])]
-    (log/debug! "received termination for" id)
     (try
       (when (terminate? message id)
-        (log/debug! "terminating step")
+        (log/debug! "terminating step by request" id)
         (docker/kill! (:docker state) docker-id)
         (log/notice! "STEP TERMINATED BY REQUEST")
         (task/status! (:kafka state) task "step-terminated" message)
         (swap! (:state state) assoc :status :waiting :task {}))
       (catch Exception e
-        (log/exception! e "STEP TERMINATION FAILED")))))
+        (log/exception! e "STEP TERMINATION FAILED" id)))))
 
 (defn apoptosis-timer
   [delay]
