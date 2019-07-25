@@ -3,9 +3,9 @@
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. [Workaround: The write-json task now waits for parca output just so its worker node won't time out waiting for more work to do.] Maybe workers should stick around while runs (or their run) are running, or maybe we should just auto-start more of them on demand and make them start up faster.
 *** auto-launch and shutdown workers, probably mediated by Gaia. Either accept a worker count from the workflow builder for speed and adjustability or react to the queue length to be more automatic. [Low priority since the WCM builder now does it.]
-** is the gateway machine obsolete now that the workflow builder can connect to gaia-base and zookeeper-prime?
-*** (do we need separate pyenv-virtualenvs to share a gateway machine or to gracefully handle updates?)
-*** (compare cloud shell to a gateway GCE instance)
+*** pulling a docker image is slow so periodically save a new GCE Image in the image family. `sudo su -l sisyphus && docker pull python:2.7.16 && docker pull gcr.io/allen-discovery-center-mcovert/wcm-runtime`, reap some old images, do `sudo apt-get upgrade`, and trim the journalctl history. Then save the image as "sisyphus-v3" (etc.) in the "sisyphus-worker" family.
+*** pulling a docker image is slow so consider having idle workers pre-pull the image for an upcoming task, at least when all remaining commands in the workflow use the same image
+** delete the gateway machine?
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
 ** (Ryan) handle task cancel when container hasn't started yet (kill the container once it loads, if it does?)
@@ -18,6 +18,9 @@
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely) (the workflow builder rejects them early)
 ** auto-create the output bucket?
 * gaia
+** don't start each workflow with scary looking log entries "CANCELING " followed by "CANCELING (:every :step :in :the :workflow)"
+** remember when each run begins and tell the elapsed time in the "WORKFLOW COMPLETE" log entry
+** get status info: what are the status enum values? distinguish tasks waiting for workers vs tasks handed off to workers. indicate which worker is running which task.
 ** wcm.py: provide a means to upload directory trees to storage from client [is gcsfuse sufficient? it needs the --implicit-dirs flag until we make sisyphus create the dirs]
 ** wcm.py: enable the ability to do parts of the workflow (parca, sim, analysis), as well as all at once: you can set --run_analysis=0 or --generations=0. is that sufficient? to queue up sims and analysis but block them requires some trick like making them depend on a file that nothing writes, then manually creating the files, then calling Gaia.run()? or a web UI.
 ** standardize gaia API
@@ -27,6 +30,7 @@
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
 * logs (for now, the logs are the UI)
+** auto-flush at :notice level and above, or manually flush after logging STEP COMPLETED?
 ** store a persistent log of high level info plus error messages, esp. for CI runs; or save stdout+stderr from all steps; or dump logs for a single run in bucket alongside results
 ** when looking at gaia workflow status from the client, provide means to filter tasks/data etc
 ** figure out how to filter viewing by workflow name or user or task. Which LogEntry fields are most useful for that? log name? log "tag" label? .setOperation() [ID, producer]? setSourceLocation() esp. for stack traces? gaia and sisyphus now set several of these
