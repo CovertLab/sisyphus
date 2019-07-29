@@ -53,16 +53,15 @@
   (let [task (:task @(:state state))
         {:keys [id docker-id]}
         (select-keys task [:id :docker-id])]
-    (log/debug! "received termination for" id)
     (try
       (when (terminate? message id)
-        (log/debug! "terminating step")
+        (log/debug! "terminating step by request" id)
         (docker/kill! (:docker state) docker-id)
         (log/notice! "STEP TERMINATED BY REQUEST")
         (task/status! (:kafka state) task "step-terminated" message)
         (swap! (:state state) assoc :status :waiting :task {}))
       (catch Exception e
-        (log/exception! e "STEP TERMINATION FAILED")))))
+        (log/exception! e "STEP TERMINATION FAILED" id)))))
 
 (defn apoptosis-timer
   [delay]
@@ -85,18 +84,28 @@
    :task {}
    :status :waiting))
 
+(defn task-tag
+  [task]
+  (let [workflow-name (:workflow task "no-workflow")
+        task-name (:name task "no-name")]
+    (str log/gce-instance-name "." workflow-name "." task-name)))
+
 (defn sisyphus-handle-rabbit
   "Handle an incoming task message by running the requested step."
   [state channel metadata ^bytes payload]
   (try
     (let [raw (String. payload "UTF-8")
-          task (json/parse-string raw true)]
-      (log/notice! "STARTING STEP" task)
-      (do
-        (swap! (:state state) run-state! task)
-        (task/perform-task! state task)
-        (langohr/ack channel (:delivery-tag metadata))
-        (swap! (:state state) reset-state! (:config state))))
+          task (json/parse-string raw true)
+          tag (task-tag task)]
+      (log/tag
+       tag
+       (fn []
+         (log/notice! "STARTING STEP" tag task)
+         (do
+           (swap! (:state state) run-state! task)
+           (task/perform-task! state task)
+           (langohr/ack channel (:delivery-tag metadata))
+           (swap! (:state state) reset-state! (:config state))))))
     (catch Exception e
       (log/exception! e "step"))))
 
@@ -147,7 +156,7 @@
 (defn -main
   [& args]
   (try
-    (log/info! "sisyphus rises:" log/gce-instance-name)
+    (log/info! "sisyphus worker rises:" log/gce-instance-name)
     (let [path "resources/config/sisyphus.clj"
           config (read-path path)
           state (start! config)]
