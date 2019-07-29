@@ -20,8 +20,8 @@
   []
   (try
     (let [self log/gce-instance-name]
-      (log/info! "sisyphus worker shutting down" self)
-      (log/info!
+      (log/notice! "sisyphus worker shutting down" self)
+      (log/notice!
        (sh/sh
         "/snap/bin/gcloud"
         "--quiet"
