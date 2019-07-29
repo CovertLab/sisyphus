@@ -31,7 +31,11 @@
         queue-name (:queue config)
         exchange (:exchange config)
         _ (lexchange/declare channel exchange "direct")
-        queue (lqueue/declare channel queue-name {:exclusive false :durable true})
+        queue (lqueue/declare
+               channel queue-name
+               {:exclusive false
+                :durable true
+                :auto-delete false})
         routing-key (:routing-key config)]
     (if-not (= exchange "")
       (lqueue/bind channel queue-name exchange {:routing-key routing-key}))
