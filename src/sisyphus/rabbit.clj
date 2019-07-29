@@ -19,9 +19,9 @@
 
 (defn connect!
   "Connect to the rabbitmq service. Accepts a `config` map containing several possible options:
-     * :queue - name of the rabbit queue to connect to (default 'sisyphus')
-     * :exchange - name of the exchange to connect to (defaults to global exchange '')
-     * :routing-key - routing key to use for messages (defaults to 'sisyphus')
+     * :queue - name of the rabbit queue to connect to (default 'sisyphus-queue')
+     * :exchange - name of the exchange to connect to (defaults to global exchange 'sisyphus-exchange')
+     * :routing-key - routing key to use for messages (defaults to 'sisyphus-task')
    Returns a map containing all of the rabbitmq connection information."
   [config]
   (let [config (merge default-config config)
