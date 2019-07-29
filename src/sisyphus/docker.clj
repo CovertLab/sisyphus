@@ -104,6 +104,7 @@
 (defn pull!
   "Pull the docker image given by the `image` argument."
   [docker image]
+  (log/info! "docker pull" image)
   (docker-retry 3 (fn [] (docker/pull docker image))))
 
 (def default-options

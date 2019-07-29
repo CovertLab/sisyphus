@@ -30,7 +30,6 @@
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
 * logs (for now, the logs are the UI)
-** auto-flush at :notice level and above, or manually flush after logging STEP COMPLETED?
 ** store a persistent log of high level info plus error messages, esp. for CI runs; or save stdout+stderr from all steps; or dump logs for a single run in bucket alongside results
 ** when looking at gaia workflow status from the client, provide means to filter tasks/data etc
 ** figure out how to filter viewing by workflow name or user or task. Which LogEntry fields are most useful for that? log name? log "tag" label? .setOperation() [ID, producer]? setSourceLocation() esp. for stack traces? gaia and sisyphus now set several of these
@@ -39,13 +38,12 @@
 *** also try stackdriver debugger, load trace & profiler, dashboards
 ** when the app in-container prints a stack trace, get that into one log entry for readability (even if it's a heurstic aggregation) and set the log level to severe
 ** design Gaia and Sisyphus logs to be more informative, less cluttered, easier to filter, and easier to read
-** clearly label the action for every log entry
+** clearly label the action or purpose for each log entry
 ** (jerry) design the content of each message, e.g.
 *** sisyphus-status: {u'status': u'create', u'docker-id': u'8441243d6973', u'id': u'cbb31409-3bc9-4811-94d0-97a0f6bfa3b5', u'docker-config': {u'mounts': {u'/tmp/sisyphus/outputs/data/jerry/20190701.110950/kb': u'/wcEcoli/out/wf/kb'}, u'image': u'gcr.io/allen-discovery-center-mcovert/jerry-wcm-code:latest', u'command': [u'sh', u'-c', u'python -u -m wholecell.fireworks.runTask parca \'{"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}\'']}}
 **** should be more like
 *** worker sisyphus-b: python -u -m wholecell.fireworks.runTask parca {"ribosome_fitting": true, "rnapoly_fitting": true, "cpus": 1, "output_directory": "/wcEcoli/out/wf/kb/"}
 ** remove internal debugging messages
-** label each message for its purpose
 ** remove the u'text' clutter
 ** (jerry) streamline or strip out JSON data, UUIDs, and such except where it's definitely useful for debugging
 * errors
@@ -74,7 +72,7 @@
 ** web UI: show a graph of your current workflow's steps, click on a step to see its inputs, outputs, log, and which inputs are available; show the workers and what tasks each one is running
 ** tools to simplify and speed up the dev cycle
 ** use the server DNS names within the cloud rather than hardwired IP addresses
-** remove webserver state viewing
+** remove webserver state viewing (what webserver?)
 * DONE
 ** Sisyphus created empty directories rather than storing archive files for WCM task outputs e.g. sisyphus/data/jerry/20190628.204402/kb/
 ** Sisyphus created directories for failed tasks e.g. sisyphus/data/jerry/20190628.204402/plotOut/
@@ -150,3 +148,4 @@
 ** (Ryan) sometimes rabbit messages are not received by sisyphus
 *** gaia client should check arg types before sending a request to the server
 *** retry docker pull on com.spotify.docker.client.exceptions.DockerException: java.util.concurrent.ExecutionException: javax.ws.rs.ProcessingException: java.io.IOException: Connection refused
+** auto-flush at :notice level and above, or manually flush after logging STEP COMPLETED?

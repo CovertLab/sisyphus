@@ -135,12 +135,6 @@
    kafka task status
    (assoc message :exception (.toString throwable)) :status-topic))
 
-(defn task-tag
-  [task]
-  (let [workflow-name (:workflow task "no-workflow")
-        task-name (:name task "no-name")]
-    (str log/gce-instance-name "." workflow-name "." task-name)))
-
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
    execute the task specified by the given `task` map, downloading all inputs from cloud
@@ -158,10 +152,6 @@
 
           command (or (:command task) (first-command (:commands task)))]
 
-      (log/tag
-       (task-tag task)
-       (fn []
-         (log/info! "docker pull" image)
          (docker/pull! docker image)
 
          (doseq [input inputs]
@@ -218,8 +208,8 @@
                    :path (:key output)
                    :key (str (:bucket output) ":" (:key output))}))))
 
-           (log/notice! "ENDED STEP" (:workflow task) (:name task) task)
-           (status! kafka task "step-complete" {})))))
+           (log/notice! "STEP COMPLETED" (:workflow task) (:name task) task)
+           (status! kafka task "step-complete" {})))
 
     (catch Exception e
       (log/exception! e "STEP FAILED")
