@@ -20,20 +20,19 @@
   []
   (try
     (let [self log/gce-instance-name]
-      (log/notice! "sisyphus worker shutting down" self)
-      (log/notice!
-       (sh/sh
-        "/snap/bin/gcloud"
-        "--quiet"
-        "compute"
-        "instances"
-        "delete"
-        self
-        "--zone"
-        log/gce-zone))
+      (log/notice! "sisyphus worker shutting down:" self)
+      (sh/sh
+       "/snap/bin/gcloud"
+       "--quiet"
+       "compute"
+       "instances"
+       "delete"
+       self
+       "--zone"
+       log/gce-zone)
       (System/exit 0))
     (catch Exception e
-      (log/exception! e "shutting down"))))
+      (log/exception! e "exception while shutting down"))))
 
 (defn timer
   [wait f]

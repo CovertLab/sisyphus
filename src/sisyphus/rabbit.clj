@@ -33,6 +33,9 @@
         _ (lexchange/declare channel exchange "direct")
         queue (lqueue/declare
                channel queue-name
+               ; Critical: Not exclusive to one consumer, durable to survive a
+               ; broker restart, and don't auto-delete so it won't drop messages
+               ; when there are no consumers.
                {:exclusive false
                 :durable true
                 :auto-delete false})

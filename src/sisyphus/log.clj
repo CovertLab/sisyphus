@@ -63,8 +63,21 @@
     (.flush w)
     (.toString w)))
 
+;; Stackdriver log severity levels, from lowest to highest severity.
+;; NOTE: log-entry! flushes at Severity/NOTICE and higher. That's useful to get
+;; a shutdown message through to the logging server, also for a timely message
+;; to be timely among messages from other servers.
+(def debug Severity/DEBUG)
+(def info Severity/INFO) ; routine info
+(def notice Severity/NOTICE) ; significant events like start up, shut down, or configuration
+(def warning Severity/WARNING) ; might cause problems
+(def error Severity/ERROR) ; likely to cause problems
+;(def critical Severity/CRITICAL) ; severe problems or brief outagaes
+;(def alert Severity/ALERT) ; a person should take action immediately
+;(def emergeny Severity/EMERGENCY) ; one or more systems are unusable
+
 (defn- log-entry!
-  "Log an entry."
+  "Log an entry. Flush it at `notice` severity and higher."
   ; TODO(jerry): Log a sequence of entries at once from Docker output lines.
   [^Severity severity ^Payload payload]
   (let [{:keys [name resource]} *logger*
@@ -78,24 +91,14 @@
             .build)
         entries (Collections/singletonList entry)]
     (.write -logging entries (make-array Logging$WriteOption 0))
-    (if (>= (.ordinal severity) (.ordinal Severity/NOTICE))
+    (if (>= (.ordinal severity) (.ordinal notice))
       (.flush -logging))))
 
 (defn- log-string!
-  "Log a string message."
+  "Log a string message. Flush it at notice severity or above."
   [^Severity severity ^String message]
   (log-entry! severity (Payload$StringPayload/of message))
   (println (str severity ": " message)))
-
-;; Stackdriver log severity levels from lowest to highest priority.
-(def debug Severity/DEBUG)
-(def info Severity/INFO) ; routine info
-(def notice Severity/NOTICE) ; significant events like start up, shut down, or configuration
-(def warning Severity/WARNING) ; might cause problems
-(def error Severity/ERROR) ; likely to cause problems
-;(def critical Severity/CRITICAL) ; severe problems or brief outagaes
-;(def alert Severity/ALERT) ; a person should take action immediately
-;(def emergeny Severity/EMERGENCY) ; one or more systems are unusable
 
 (defn log!
   [^Severity severity & x]
