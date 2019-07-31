@@ -26,9 +26,10 @@
 
    (That assumes you installed Python 2.7.16 via the command `pyenv install 2.7.16`.)
 
-   The following lines add the gcloud tools to your shell path. The details vary depending on
-   where you installed gcloud. Add these lines if the installer didn't put `gcloud`
-   on your path one way or another:
+   Test if the installer put `gcloud` on your shell path one way or another by
+   opening a new shell and running `which gcloud` (or `where` on Windows). If
+   it doesn't find gcloud, then add lines like the following example to your shell
+   profile:
 
    ```sh
    # Update PATH for the Google Cloud SDK and gcloud CLI.
