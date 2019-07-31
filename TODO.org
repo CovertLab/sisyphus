@@ -3,22 +3,21 @@
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
 ** reevaluate the worker shutdown rules or at least lengthen the worker timeout. [Workaround: The write-json task now waits for parca output just so its worker node won't time out waiting for more work to do.] Maybe workers should stick around while runs (or their run) are running, or maybe we should just auto-start more of them on demand and make them start up faster.
 *** auto-launch and shutdown workers, probably mediated by Gaia. Either accept a worker count from the workflow builder for speed and adjustability or react to the queue length to be more automatic. [Low priority since the WCM builder now does it.]
-*** pulling a docker image is slow so periodically save a new GCE Image in the image family. `sudo su -l sisyphus && docker pull python:2.7.16 && docker pull gcr.io/allen-discovery-center-mcovert/wcm-runtime`, reap some old images, do `sudo apt-get upgrade`, and trim the journalctl history. Then save the image as "sisyphus-v3" (etc.) in the "sisyphus-worker" family.
+*** pulling a docker image is slow so periodically save a new GCE Image in the disk image family containing current docker images: `sudo su -l sisyphus && docker pull python:2.7.16 && docker pull gcr.io/allen-discovery-center-mcovert/wcm-runtime`, reap some old images, do `sudo apt-get upgrade`, and trim the journalctl history. Then save the image as "sisyphus-v3" (etc.) in the "sisyphus-worker" family.
 *** pulling a docker image is slow so consider having idle workers pre-pull the image for an upcoming task, at least when all remaining commands in the workflow use the same image
 ** delete the gateway machine?
 ** use a docker image version tag? how to feed it to the worker launcher?
 * sisyphus
 ** (Ryan) handle task cancel when container hasn't started yet (kill the container once it loads, if it does?)
 ** (Ryan: investigating) have docker output files as the user who starts sisyphus
+** should task/perform-task! also call docker/stop! ?
 ** fill out the error handling and recovery, e.g. don't use deprecated GCS methods that can't retry
 *** make sisyphus-handle-rabbit use try/finally to ensure it ACKs to rabbit and resets its task state on exception?
-** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry
 ** service account setup; see https://cloud.google.com/compute/docs/access/create-enable-service-accounts-for-instances : recommends creating a new service account (like "sisyphus") rather than using the Compute Engine default service account; giving it the https://www.googleapis.com/auth/cloud-platform scope; and configuring the instance to run as that service account. Needed for Stackdriver? Presumably we can configure all scopes this way without environment vars.
 ** create intermediate directories in GCS for nested keys (needed for gcsfuse; not needed for the web console browser)
 ** support relative local paths within the container (or reject them up front with a clear error message rather than failing obscurely) (the workflow builder rejects them early)
-** auto-create the output bucket?
 * gaia
-** don't start each workflow with scary looking log entries "CANCELING " followed by "CANCELING (:every :step :in :the :workflow)"
+** don't start each workflow with scary looking log entry "CANCELING (:every :step :in :the :new :workflow)"
 ** remember when each run begins and tell the elapsed time in the "WORKFLOW COMPLETE" log entry
 ** get status info: what are the status enum values? distinguish tasks waiting for workers vs tasks handed off to workers. indicate which worker is running which task.
 ** wcm.py: provide a means to upload directory trees to storage from client [is gcsfuse sufficient? it needs the --implicit-dirs flag until we make sisyphus create the dirs]
@@ -149,3 +148,5 @@
 *** gaia client should check arg types before sending a request to the server
 *** retry docker pull on com.spotify.docker.client.exceptions.DockerException: java.util.concurrent.ExecutionException: javax.ws.rs.ProcessingException: java.io.IOException: Connection refused
 ** auto-flush at :notice level and above, or manually flush after logging STEP COMPLETED?
+** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry
+** don't start each workflow with scary looking log entries "CANCELING " followed by "CANCELING (:every :step :in :the :workflow)"

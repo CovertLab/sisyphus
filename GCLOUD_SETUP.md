@@ -1,89 +1,54 @@
-install gcloud
+# Install and log in to the Google Cloud SDK
 
-```
-sudo snap install google-cloud-sdk --classic
-```
+1. install the Google Cloud SDK and the `gcloud` command line tools
 
-login through google cloud
+   See [Installing Google Cloud SDK — Installation options](https://cloud.google.com/sdk/install#installation_options):
 
-```
-gcloud auth login
-```
+   * Debian/Ubuntu: [install with apt-get](https://cloud.google.com/sdk/docs/downloads-apt-get)
+   * Red Hat Enterprise Linux 7/CentOS 7: [install with yum](https://cloud.google.com/sdk/docs/downloads-yum)
+   * Snap for Linux:  
+      `sudo snap install google-cloud-sdk --classic`
+   * Other Linux: [install with curl](https://cloud.google.com/sdk/docs/downloads-interactive#linux)
+   * maOS: [install with curl](https://cloud.google.com/sdk/docs/downloads-interactive#mac)
+   * Windows: [install with the Cloud SDK installer](https://cloud.google.com/sdk/docs/downloads-interactive#windows)
 
-set the project
+2. add these lines to your shell `.profile` or `.bash_profile` as needed
 
-```
-gcloud config set project allen-discovery-center-mcovert
-```
+   The following lines set a Python 2.7 version for running `gcloud`. As written, it
+   assumes you used `pyenv` to install Python, e.g. `pyenv install 2.7.16`:
 
-allocate new machine
+   ```sh
+   # Set the Python version for Cloud SDK. It has to be Python 2.7.
+   export CLOUDSDK_PYTHON=$(pyenv shell 2.7.16; pyenv which python)
+   ```
 
-```
-gcloud compute --project=allen-discovery-center-mcovert instances create NAME --zone=us-west1-b --machine-type=n1-standard-1 --subnet=default --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=441871726775-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=ubuntu-1804-bionic-v20190617 --image-project=ubuntu-os-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard
-```
+   The following lines put the gcloud tools on your shell path, and vary depending on
+   where you installed gcloud. The installer should add these lines for you:
 
-create a key for the service account and download it, then
-scp it to the gateway
+   ```sh
+   # Update PATH for the Google Cloud SDK and gcloud CLI.
+   if [ -f '$HOME/dev/google-cloud-sdk/path.bash.inc' ]; then . '$HOME/dev/google-cloud-sdk/path.bash.inc'; fi
+   
+   # The next line enables shell command completion for gcloud.
+   if [ -f '$HOME/dev/google-cloud-sdk/completion.bash.inc' ]; then . '$HOME/dev/google-cloud-sdk/completion.bash.inc'; fi
+   ```
 
-```
-gcloud compute scp $GCLOUD_KEY gateway:.cloud.json
-```
+2. log in to gcloud
 
-ssh into the new machine
+   ```
+   gcloud auth login
+   ```
 
-```
-gcloud compute ssh gateway
-```
+3. set the project
 
-export the value
+   ```
+   gcloud config set project allen-discovery-center-mcovert
+   ```
 
-```
-export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.cloud.json
-```
+4. set up docker
 
-activate service acccount
-
-```
-gcloud auth activate-service-account sisyphus@allen-discovery-center-mcovert.iam.gserviceaccount.com --key-file ~/.cloud.json
-```
-
-install pip and ipython
-
-```
-sudo apt update
-sudo apt install python-pip ipython
-```
-
-clone gaia
-
-```
-git clone https://github.com/prismofeverything/gaia.git
-```
-
-cd into the gaia client
-
-```
-cd gaia/client/python
-```
-
-run the requirements.txt
-
-```
-pip install -r requirements.txt
-```
-
-start ipython
-
-```
-ipython
-```
-
-load gaia client
-
-```
-import gaia
-config = {
-    'gaia_host': '10.138.0.21:24442',
-    'kafka_host': '10.138.0.2:9092'}
-flow = gaia.Gaia(config)
-```
+   1. Create a Docker ID [on their website](https://www.docker.com/).
+   2. Install [Docker Desktop](https://www.docker.com/products/docker-desktop).
+   3. Log in to your Docker ID from the Docker client.
+   4. Set up [shell completion for Docker](https://docs.docker.com/docker-for-mac/).
+   5. You can exit Docker Desktop when you're not using it.
