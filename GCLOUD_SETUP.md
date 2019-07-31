@@ -14,16 +14,21 @@
 
 2. add these lines to your shell `.profile` or `.bash_profile` as needed
 
-   The following lines set a Python 2.7 version for running `gcloud`. As written, it
-   assumes you used `pyenv` to install Python, e.g. `pyenv install 2.7.16`:
+   The following lines set a consistent Python 2.7 version for running `gcloud`.
+   Without this, `gcloud` can fail to start up, e.g. when the `pyenv version` is
+   set to python 3, displaying an error message such as
+   `pyenv: python2: command not found`.
 
    ```sh
    # Set the Python version for Cloud SDK. It has to be Python 2.7.
    export CLOUDSDK_PYTHON=$(pyenv shell 2.7.16; pyenv which python)
    ```
 
-   The following lines put the gcloud tools on your shell path, and vary depending on
-   where you installed gcloud. The installer should add these lines for you:
+   (That assumes you installed Python 2.7.16 via the command `pyenv install 2.7.16`.)
+
+   The following lines add the gcloud tools to your shell path. The details vary depending on
+   where you installed gcloud. Add these lines if the installer didn't put `gcloud`
+   on your path one way or another:
 
    ```sh
    # Update PATH for the Google Cloud SDK and gcloud CLI.
@@ -33,17 +38,31 @@
    if [ -f '$HOME/dev/google-cloud-sdk/completion.bash.inc' ]; then . '$HOME/dev/google-cloud-sdk/completion.bash.inc'; fi
    ```
 
-2. log in to gcloud
+   Then open a new shell or restart your shell:
+
+   `exec -l $SHELL`
+
+3. run [gcloud init](https://cloud.google.com/sdk/gcloud/reference/init)
+
+   * When it asks for a default project, enter `allen-discovery-center-mcovert`
+   * When it asks for a default Compute Engine zone, enter `us-west1-b`
 
    ```
-   gcloud auth login
+   gcloud init
    ```
 
-3. set the project
+   This will:
+   * initialize `gcloud` and its SDK tools
+   * run some diagnostics
+   * log in using your user account credentials
+   * set configuration defaults
 
-   ```
-   gcloud config set project allen-discovery-center-mcovert
-   ```
+   (To change settings later, you can re-run `gcloud init` or run specific commands
+   like `gcloud auth login`, `gcloud config set zone us-west1-b`, and
+   `gcloud config set project allen-discovery-center-mcovert`.)
+
+   (There's good documentation available via `gcloud help` and the
+   [gcloud web reference](https://cloud.google.com/sdk/gcloud/reference/))
 
 4. set up docker
 
