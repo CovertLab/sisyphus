@@ -8,13 +8,15 @@
 
 ## concept
 
-Sisyphus is a task execution system that focuses on decentralization, running commands in containers, and pulling and pushing inputs and outputs to and from a data store. There is no leader so you can add new nodes on the fly to help out with load, and scale them back down again when you are done.
+Sisyphus is a task execution worker designed for decentralization, running commands in containers, and pulling inputs from and pushing outputs to a data store. There is no leader so you can add new nodes on the fly to help out with load and scale them back down again when you are done.
 
 ## setup
 
-Sisyphus uses [RabbitMQ](https://www.rabbitmq.com/) to receive task messages, so you need an instance running somewhere you can connect to.
+In order to use Google Cloud Storage, Compute Engine, and Container Registry you must install the SDK, then log in.
+Follow the instructions in [Install and log in to the Google Cloud SDK](GCLOUD_SETUP.md).
+(See [Cloud Storage Client Libraries](https://cloud.google.com/storage/docs/reference/libraries) for more background on programming with the SDK to access cloud resources.)
 
-In order to use cloud storage and GCR you have to authorize with google. This means running `gcloud auth login` at some point with an account that is tied to google cloud, and you have to follow the directions [here](https://cloud.google.com/storage/docs/reference/libraries) for "setting up authentication" to access the cloud resources programmatically. 
+Sisyphus uses [RabbitMQ](https://www.rabbitmq.com/) to receive run-task messages and [Kafka](https://www.confluent.io/) to communicate with the workflow engine [Gaia](https://github.com/prismofeverything/gaia), so you need those servers running somewhere you can connect to.
 
 ## storage
 
@@ -50,7 +52,7 @@ The map keys are:
 * `inputs` - map of `bucketname:remote/path` to `/internal/container/path` for copying down files from the object store and knowing where to bind them inside the container.
 * `outputs` - same as inputs, but opposite, so a map of object store paths `bucket:remote/path` where any files at the original internal path `/internal/container/path` will be uploaded to once execution is complete.
 * `commands` - a command to run, expressed as an array of token strings.
-* `stdout`, `stdin` and `stderr` with internal paths, if required.
+* `stdout`, `stdin` and `stderr` with internal paths, if required. **<== [TODO] Update this.**
 
 ## triggering execution
 
