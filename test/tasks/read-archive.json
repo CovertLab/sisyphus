@@ -2,7 +2,7 @@
  "inputs": {
    "sisyphus:data/test/archive": "/wcEcoli/later/"},
  "outputs": {
-   "sisyphus:data/test/agent-list": "STDOUT"},
+   "sisyphus:data/test/agent-list": ">"},
  "command": [
    "ls",
    "-lach"]}

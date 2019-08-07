@@ -21,8 +21,8 @@
         colon (.indexOf full-key ":")]
     [(.substring full-key 0 colon) (.substring full-key (inc colon))]))
 
-(def stdout-token
-  "STDOUT")
+(def stdout-tokens
+  #{">" "STDOUT"})
 
 (defn find-local!
   [root [remote internal]]
@@ -30,7 +30,7 @@
         input (io/file root key)
         local (.getAbsolutePath input)
         archive (str local ".tar.gz")
-        stdout? (= internal stdout-token)
+        stdout? (stdout-tokens internal)
         directory? (archive/directory-path? internal)
         intern (archive/trim-slash internal)]
     (try

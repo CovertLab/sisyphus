@@ -2,7 +2,7 @@
  "inputs": {
    "sisyphus:data/clear": "/mnt/clear"},
  "outputs": {
-   "sisyphus:data/later": "STDOUT"},
+   "sisyphus:data/later": ">"},
  "command": [
    "md5sum",
    "/mnt/clear"]}
