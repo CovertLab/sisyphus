@@ -1,3 +1,5 @@
+* --> Everything moved to https://github.com/CovertLab/sisyphus/projects/2
+* ^^^^
 * mysteries
 * questions / considerations
 ** are there rules programmers need to know about tasks deleting and writing into the output directories?
@@ -29,7 +31,6 @@
 ** make workers launch quicker. is it quicker to launch a VM from a snapshot or an instance template than an image? easier to resize?
 ** add an API method to list the current workflow names
 * logs (for now, the logs are the UI)
-** store a persistent log of high level info plus error messages, esp. for CI runs; or save stdout+stderr from all steps; or dump logs for a single run in bucket alongside results
 ** when looking at gaia workflow status from the client, provide means to filter tasks/data etc
 ** figure out how to filter viewing by workflow name or user or task. Which LogEntry fields are most useful for that? log name? log "tag" label? .setOperation() [ID, producer]? setSourceLocation() esp. for stack traces? gaia and sisyphus now set several of these
 *** log a sequence of docker output lines as a batch (mainly an optimization but it could reduce log interleaving between tasks)
@@ -50,7 +51,7 @@
 ** need more error detection & reporting
 ** test what happens when things go wrong. does it emit helpful error messages? can it do self-repair?
 *** exceptions
-*** bad input: expunge a non-existant name, expunge an expunged name, commands and steps missing needed fields, steps referring to missing commands, ...
+*** bad input: expunge a non-existent name, expunge an expunged name, commands and steps missing needed fields, steps referring to missing commands, ...
 *** cancellation at each possible juncture
 *** a server goes down at each possible juncture
 * optimization
@@ -60,11 +61,9 @@
 ** for apps with their own worker node requirements [also an optimization?]: a separate set of nodes for each workflow
 * documentation
 ** document all the GCE VM setup factors: machine type? boot disk size? OS? Identity and API access? additional access scopes? software installation and configuration? startup script? metadata?
-** write a step-by-step how-to document for lab members
 *** setting the "sisyphus" service account when configuring the GCE instance works, which obviates all the activate-service-account steps
 ** document how to create the gaia and sisyphus VM images
 ** document how to restart and monitor the gaia and sisyphus servers
-** document how to make a Compute Engine monitor chart for worker node CPU usage: on GCP dashboard, add chart, Metric instance/cpu/utilization, Filter metric.labels.instance_name = starts_with("sisyphus") and maybe more metrics like instance/disk/read_bytes_count group by project_id aggregate by sum
 * features
 ** unit tests
 ** implement nightly builds and PR builds
@@ -150,3 +149,6 @@
 ** auto-flush at :notice level and above, or manually flush after logging STEP COMPLETED?
 ** (jerry) perform-task! should catch exceptions inside the task-specific tag to better tag the "task-error" log entry
 ** don't start each workflow with scary looking log entries "CANCELING " followed by "CANCELING (:every :step :in :the :workflow)"
+** store a persistent log of high level info plus error messages, esp. for CI runs; or save stdout+stderr from all steps; or dump logs for a single run in bucket alongside results
+** write a step-by-step how-to document for lab members
+** document how to make a Compute Engine monitor chart for worker node CPU usage: on GCP dashboard, add chart, Metric instance/cpu/utilization, Filter metric.labels.instance_name = starts_with("sisyphus") and maybe more metrics like instance/disk/read_bytes_count group by project_id aggregate by sum
