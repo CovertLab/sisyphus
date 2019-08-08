@@ -202,7 +202,7 @@
                  (let [stdout (string/join "\n" @lines)]
                    (spit (:local output) stdout)))
 
-               (if (or (zero? code) (:stdout? output))
+               (when (or (zero? code) (:stdout? output))
                  (push-output! storage output)
 
                  (status!
