@@ -122,6 +122,7 @@
     (merge
      {:id (:id task)
       :workflow (:workflow task)
+      :task (:name task)
       :event status}
      message))))
 
@@ -189,17 +190,19 @@
              (log/log! (if (zero? code) log/notice log/error) "container exit code" code)
              (status! kafka task "container-exit" {:docker-id id :code code})
 
-             (if (> code 0)
+             (if-not (zero? code)
                (status!
                 kafka task "step-error"
                 {:code code
-                 :log @lines})
+                 :log @lines}))
 
-               (doseq [output outputs]
-                 (if (:stdout? output)
-                   (let [stdout (string/join "\n" @lines)]
-                     (spit (:local output) stdout)))
+             ; push the outputs to storage if the task succeeded; push stderr even on error
+             (doseq [output outputs]
+               (if (:stdout? output)
+                 (let [stdout (string/join "\n" @lines)]
+                   (spit (:local output) stdout)))
 
+               (if (or (zero? code) (:stdout? output))
                  (push-output! storage output)
 
                  (status!
