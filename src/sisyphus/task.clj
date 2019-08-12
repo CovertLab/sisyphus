@@ -211,11 +211,12 @@
                  (status!
                   kafka task "step-complete" {}))
 
-               (log/notice! "STEP FAILED" (:workflow task) (:name task) task)
-               (status!
-                kafka task "step-error"
-                {:code code
-                 :log (take-last 100 @lines)})))))
+               (do
+                 (log/notice! "STEP FAILED" (:workflow task) (:name task) task)
+                 (status!
+                  kafka task "step-error"
+                  {:code code
+                   :log (take-last 100 @lines)}))))))
 
     (catch Exception e
       (log/exception! e "STEP FAILED")
