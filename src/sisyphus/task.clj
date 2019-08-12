@@ -190,12 +190,6 @@
              (log/log! (if (zero? code) log/notice log/error) "container exit code" code)
              (status! kafka task "container-exit" {:docker-id id :code code})
 
-             (if-not (zero? code)
-               (status!
-                kafka task "step-error"
-                {:code code
-                 :log @lines}))
-
              ; push the outputs to storage if the task succeeded; push stderr even on error
              (doseq [output outputs]
                (if (:stdout? output)
@@ -209,10 +203,20 @@
                   kafka task "data-complete"
                   {:workflow (:workflow task)
                    :path (:key output)
-                   :key (str (:bucket output) ":" (:key output))}))))
+                   :key (str (:bucket output) ":" (:key output))})))
 
-           (log/notice! "STEP COMPLETED" (:workflow task) (:name task) task)
-           (status! kafka task "step-complete" {})))
+             (if (zero? code)
+               (do
+                 (log/notice! "STEP COMPLETED" (:workflow task) (:name task) task)
+                 (status!
+                  kafka task "step-complete" {}))
+
+               (do
+                 (log/notice! "STEP FAILED" (:workflow task) (:name task) task)
+                 (status!
+                  kafka task "step-error"
+                  {:code code
+                   :log @lines}))))))
 
     (catch Exception e
       (log/exception! e "STEP FAILED")
