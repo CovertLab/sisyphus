@@ -104,15 +104,18 @@
   [^Severity severity & x]
   (log-string! severity (clojure.string/join " " x)))
 
-(def debug :debug)
-(def info :info) ; routine info
-(def notice :notice) ; significant events like start up, shut down, or configuration
-(def warning :warning) ; might cause problems
-(def error :error) ; likely to cause problems
 
-(defn log!
-  [level & x]
-  (apply println level ":" x))
+;; TODO(Ryan): turn the below into an actual println alternative to gcloud logging
+;;   with protocol etc
+;; (def debug :debug)
+;; (def info :info) ; routine info
+;; (def notice :notice) ; significant events like start up, shut down, or configuration
+;; (def warning :warning) ; might cause problems
+;; (def error :error) ; likely to cause problems
+
+;; (defn log!
+;;   [level & x]
+;;   (apply println level ":" x))
 
 ; TODO(jerry): log-map! via Payload$JsonPayload/of
 
