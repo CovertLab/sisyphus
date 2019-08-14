@@ -21,15 +21,18 @@
   (try
     (let [self log/gce-instance-name]
       (log/notice! "sisyphus worker shutting down:" self)
-      (sh/sh
-       "/snap/bin/gcloud"
-       "--quiet"
-       "compute"
-       "instances"
-       "delete"
-       self
-       "--zone"
-       log/gce-zone)
+      (try
+        (sh/sh
+         "/snap/bin/gcloud"
+         "--quiet"
+         "compute"
+         "instances"
+         "delete"
+         self
+         "--zone"
+         log/gce-zone)
+        (catch InterruptedException e
+          (println "in gcloud delete" (str e))))
       (System/exit 0))
     (catch Exception e
       (log/exception! e "exception while shutting down"))))

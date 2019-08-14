@@ -26,6 +26,9 @@
 (def gce-zone
   (last (string/split (gce-metadata "zone" "not-on-GCE") #"/")))
 
+(def enable-gloud-logging?
+  (not= gce-zone "not-on-GCE"))
+
 (defn- monitored-resource
   "Build a loggable MonitoredResource with a name-tag label."
   ^MonitoredResource [^String tag]
@@ -94,28 +97,23 @@
     (if (>= (.ordinal severity) (.ordinal notice))
       (.flush -logging))))
 
+(defn prefix
+  "Clip a string to a limited length prefix."
+  [^String string limit]
+  (.substring string 0 (min (.length string) limit)))
+
 (defn- log-string!
   "Log a string message. Flush it at notice severity or above."
   [^Severity severity ^String message]
-  (log-entry! severity (Payload$StringPayload/of message))
-  (println (str severity ": " message)))
+  (let [msg (prefix message 500)]
+    (println (str severity ": " msg))
+    (if enable-gloud-logging?
+      (log-entry! severity (Payload$StringPayload/of msg)))))
 
 (defn log!
   [^Severity severity & x]
   (log-string! severity (clojure.string/join " " x)))
 
-
-;; TODO(Ryan): turn the below into an actual println alternative to gcloud logging
-;;   with protocol etc
-;; (def debug :debug)
-;; (def info :info) ; routine info
-;; (def notice :notice) ; significant events like start up, shut down, or configuration
-;; (def warning :warning) ; might cause problems
-;; (def error :error) ; likely to cause problems
-
-;; (defn log!
-;;   [level & x]
-;;   (apply println level ":" x))
 
 ; TODO(jerry): log-map! via Payload$JsonPayload/of
 

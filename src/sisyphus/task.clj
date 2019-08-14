@@ -153,6 +153,8 @@
 
           command (or (:command task) (first-command (:commands task)))]
 
+         (status! kafka task "step-start" {})
+
          (docker/pull! docker image)
 
          (doseq [input inputs]
@@ -179,7 +181,6 @@
            (doseq [line (docker/logs docker id)]
              (swap! lines conj line)
              (log/info! line)) ; TODO(jerry): Detect stack tracebacks heuristically;
-           ; join those lines into one message and log as error!
 
            (status!
             kafka task "execution-complete"
