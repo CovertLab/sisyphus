@@ -1,5 +1,6 @@
 (ns sisyphus.cloud
   (:require
+   [clojure.string :as string]
    [clojure.java.io :as io]
    [sisyphus.log :as log])
   (:import
@@ -28,6 +29,29 @@
    filesystem path."
   [path]
   (.toPath (File. path)))
+
+(defn split-key
+  [key]
+  (let [colon (.indexOf key ":")]
+    [(.substring key 0 colon)
+     (.substring key (inc colon))]))
+
+(defn key-path
+  [key]
+  (let [[bucket path] (split-key key)
+        parts (string/split path #"/+")]
+    (cons bucket parts)))
+
+(defn path-tree
+  [paths]
+  (reduce
+   (fn [tree key]
+     (let [path (key-path key)]
+       (update-in
+        tree path
+        (fn [x]
+          (or x {})))))
+   {} paths))
 
 (defn delete-tree!
   "Extremely dangerous function"

@@ -94,22 +94,16 @@
 
 (defn sisyphus-handle-rabbit
   "Handle an incoming task message by running the requested step."
-  [state channel metadata ^bytes payload]
-  (try
-    (let [raw (String. payload "UTF-8")
-          task (json/parse-string raw true)
-          tag (task-tag task)]
-      (log/tag
-       tag
-       (fn []
-         (log/notice! "STARTING STEP" tag task)
-         (do
-           (swap! (:state state) run-state! task)
-           (task/perform-task! state task)
-           (langohr/ack channel (:delivery-tag metadata))
-           (swap! (:state state) reset-state! (:config state))))))
-    (catch Exception e
-      (log/exception! e "step"))))
+  [state raw]
+  (let [task (json/parse-string raw true)
+        tag (task-tag task)]
+    (log/tag
+     tag
+     (fn []
+       (log/notice! "STARTING STEP" tag task)
+       (swap! (:state state) run-state! task)
+       (task/perform-task! state task)
+       (swap! (:state state) reset-state! (:config state))))))
 
 (defn connect!
   [config]

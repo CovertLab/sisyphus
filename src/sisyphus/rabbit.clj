@@ -50,17 +50,36 @@
      :channel channel
      :config config}))
 
+(defn handle-message-wrapper
+  "Given a function that takes a message, return a rabbit handler.
+   Takes three arguments that are provided by the rabbit consumer client:
+     * channel - the channel to the rabbit service.
+     * metadata - any information about the incoming message beyond its payload.
+     * payload - bytes representing the message just received."
+  [handle]
+  (fn
+    [channel metadata ^bytes payload]
+    (try
+      (let [message (String. payload "UTF-8")]
+        (handle message)
+        (lbasic/ack channel (:delivery-tag metadata)))
+      (catch Exception e
+        (log/exception! e "step")))))
+
 (defn start-consumer!
-  "Given the rabbit connection map and a `handle` function, start a rabbit consumer listening
-   to the queue and exchange represented by that connection, which calls `handle` each time it
-   receives a message. The `handle` function takes three arguments, `channel`, `metadata` and
-   `payload`, and an example is given in the below function `default-handle-message` in this ns."
+  "Given the rabbit connection map and a `handle` function, start a rabbit consumer
+   listening to the queue and exchange represented by that connection, which calls
+   `handle` each time it receives a message. The `handle` is a function of a single
+   string argument, any parsing will have to be done in `handle`."
   [rabbit handle]
   (let [channel (:channel rabbit)
         queue-name (:queue-name rabbit)
         thread (Thread.
                 (fn []
-                  (lconsumers/subscribe channel queue-name handle)))]
+                  (lconsumers/subscribe
+                   channel
+                   queue-name
+                   (handle-message-wrapper handle))))]
     (.start thread)))
 
 (defn publish!
@@ -82,23 +101,21 @@
   (lcore/close (:connection rabbit)))
 
 (defn default-handle-message
-  "An example of the `handle` argument passed into `start-consumer!`. Takes three arguments that
-   are provided by the rabbit consumer client:
-     * channel - the channel to the rabbit service.
-     * metadata - any information about the incoming message beyond its payload.
-     * payload - bytes representing the message just received."
-  [channel metadata ^bytes payload]
-  (let [raw (String. payload "UTF-8")
-        message (json/parse-string raw true)]
-    (log/info! "rabbit message received:" message)
-    (lbasic/ack channel (:delivery-tag metadata))))
+  "An example of the `handle` argument passed into `start-consumer!`."
+  [raw]
+  (let [message (json/parse-string raw true)]
+    (log/info! "rabbit message received:" message)))
 
 (defn -main
   [& args]
   (try
     (log/debug! "rabbbbbbbbbbit")
     (let [rabbit (connect! {})
-          consumer (start-consumer! rabbit default-handle-message)
+          maw (atom [])
+          consumer (start-consumer!
+                    rabbit
+                    (fn [s]
+                      (swap! maw conj s)))
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]
                      (close! rabbit)
