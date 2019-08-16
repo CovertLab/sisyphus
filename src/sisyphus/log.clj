@@ -9,6 +9,8 @@
     [com.google.cloud.logging LogEntry LogEntry$Builder Logging LoggingOptions
      Logging$WriteOption Payload Payload$StringPayload Severity]))
 
+(def log-truncation 5000)
+
 (defn gce-metadata
   "Retrieve a GCE instance metadata field."
   [fieldname default]
@@ -105,7 +107,7 @@
 (defn- log-string!
   "Log a string message. Flush it at notice severity or above."
   [^Severity severity ^String message]
-  (let [msg (prefix message 500)]
+  (let [msg (prefix message log-truncation)]
     (println (str severity ": " msg))
     (if enable-gloud-logging?
       (log-entry! severity (Payload$StringPayload/of msg)))))
