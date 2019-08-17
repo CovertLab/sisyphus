@@ -30,9 +30,13 @@
   [path]
   (.toPath (File. path)))
 
+(defn is-directory-path?
+  [path]
+  (= (last path) \/))
+
 (defn dir-slash
   [path]
-  (if (string/ends-with? path "/")
+  (if (is-directory-path? path)
     path
     (str path "/")))
 
@@ -92,7 +96,6 @@
                             (.setContentType default-content-type)
                             .build)
               options (into-array [(Storage$BlobTargetOption/generationMatch)])]
-          (log/debug! "mkdir" dir-name) ; *** DEBUG temporary ***
           (.create storage blob-info options)
           :created)
         (catch StorageException e
@@ -134,7 +137,6 @@
                          .build)
            options (make-array Storage$BlobTargetOption 0)
            bytes (slurp-bytes path)]
-       (log/debug! "uploading" key) ; *** DEBUG temporary ***
        (.create storage blob-info bytes options)
        (make-dirs! storage bucket key false)
        blob-info)
@@ -167,12 +169,14 @@
         file (io/file path)
         base (io/file (.getParent file))
         remote-path (str bucket ":" key)]
-    (.mkdirs base)
     (if blob
-      (try
-        (.downloadTo blob (get-path path))
-        (catch StorageException e
-          (log/exception! e "failed to download" remote-path "to" path)))
+      (if (is-directory-path? path)
+        (.mkdirs file)
+        (try
+          (.mkdirs base)
+          (.downloadTo blob (get-path path))
+          (catch StorageException e
+            (log/exception! e "failed to download" remote-path "to" path))))
       (log/error! "file unavailable to download" remote-path))))
 
 (defn directory-options
