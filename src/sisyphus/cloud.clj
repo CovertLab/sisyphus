@@ -8,7 +8,7 @@
    [com.google.cloud.storage
     Storage StorageOptions StorageException
     Storage$BlobListOption
-    Storage$BlobWriteOption
+    Storage$BlobTargetOption
     Bucket BucketInfo
     Blob BlobId BlobInfo]))
 
@@ -29,6 +29,12 @@
    filesystem path."
   [path]
   (.toPath (File. path)))
+
+(defn dir-slash
+  [path]
+  (if (string/ends-with? path "/")
+    path
+    (str path "/")))
 
 (defn split-key
   [key]
@@ -66,21 +72,43 @@
             (io/delete-file path))
           (recur (rest paths)))))))
 
+(defn make-dir!
+  "Make a 'directory/' entry if it's not already present."
+  [^Storage storage bucket key]
+  (let [dir-name (dir-slash key)]
+    (try
+      (let [blob-info (-> (BlobInfo/newBuilder bucket dir-name 0) ; match gen 0 means if-absent
+                          (.setContentType default-content-type)
+                          .build)
+            options (into-array [(Storage$BlobTargetOption/generationMatch)])]
+        (.create storage blob-info options))
+      (catch StorageException e
+        (if-not (string/includes? (.getMessage e) "Precondition Failed")
+          (log/exception! e "failed to make-dir" (str bucket ":" dir-name)))))
+    dir-name))
+
+(defn slurp-bytes
+  "Slurp a byte array from anything that clojure.java.io/input-stream can read."
+  [readable]
+  (with-open [in (clojure.java.io/input-stream readable)
+              out (java.io.ByteArrayOutputStream.)]
+    (clojure.java.io/copy in out)
+    (.toByteArray out)))
+
 (defn upload!
   "Upload the file at the given local filesystem path to the cloud storage bucket and key."
+  ; TODO(jerry): If the files get big, use storage.writer() and a truncated
+  ; exponential backoff retry loop.
   ([^Storage storage bucket key path]
    (upload! storage bucket key path {:content-type default-content-type}))
   ([storage bucket key path {:keys [content-type]}]
    (try
-     (let [blob-id ^BlobId (BlobId/of bucket key)
-           builder (BlobInfo/newBuilder blob-id)
-           blob-info (.build
-                      (.setContentType
-                       builder
-                       (or content-type default-content-type)))
-           options (make-array Storage$BlobWriteOption 0)
-           stream (FileInputStream. (.toFile (get-path path)))]
-       (.create storage blob-info stream options)  ; TODO(jerry): "This method is marked as Deprecated because it cannot safely retry, given that it accepts an InputStream which can only be consumed once."
+     (let [blob-info (-> (BlobInfo/newBuilder bucket key)
+                         (.setContentType (or content-type default-content-type))
+                         .build)
+           options (make-array Storage$BlobTargetOption 0)
+           bytes (slurp-bytes path)]
+       (.create storage blob-info bytes options)
        blob-info)
      (catch StorageException e
        (log/exception! e "failed to upload" path "to" (str bucket ":" key))))))
