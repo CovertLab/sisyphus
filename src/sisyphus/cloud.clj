@@ -73,7 +73,8 @@
           (recur (rest paths)))))))
 
 (defn make-dir!
-  "Make a 'directory/' entry if it's not already present."
+  "Make a storage 'directory/' entry if it's absent."
+  ; TODO(jerry): Cache created directory names for a while to reduce repeats.
   [^Storage storage bucket key]
   (let [dir-name (dir-slash key)]
     (try
@@ -81,11 +82,26 @@
                           (.setContentType default-content-type)
                           .build)
             options (into-array [(Storage$BlobTargetOption/generationMatch)])]
-        (.create storage blob-info options))
+        ; (println "make-dir!" dir-name) ; *** DEBUG ***
+        (.create storage blob-info options)
+        :created)
       (catch StorageException e
-        (if-not (string/includes? (.getMessage e) "Precondition Failed")
-          (log/exception! e "failed to make-dir" (str bucket ":" dir-name)))))
-    dir-name))
+        (when-not (string/includes? (.getMessage e) "Precondition Failed")
+          (log/exception! e "failed to make-dir" (str bucket ":" dir-name))
+          :failed)
+        :present))))
+
+(defn make-dirs!
+  "Make a storage 'key/' entry if last?, and its parents, if absent."
+  ([^Storage storage bucket key]
+   (make-dirs! storage bucket key false))
+  ([^Storage storage bucket key last?]
+   (let [java-file (io/file key)
+         parent (.getParent java-file)]
+     (if parent
+       (make-dirs! storage bucket parent true))
+     (if last?
+       (make-dir! storage bucket (.getPath java-file))))))
 
 (defn slurp-bytes
   "Slurp a byte array from anything that clojure.java.io/input-stream can read."
@@ -108,13 +124,17 @@
                          .build)
            options (make-array Storage$BlobTargetOption 0)
            bytes (slurp-bytes path)]
+       ; (println "uploading" key) ; *** DEBUG ***
        (.create storage blob-info bytes options)
+       (make-dirs! storage bucket key false)
        blob-info)
      (catch StorageException e
        (log/exception! e "failed to upload" path "to" (str bucket ":" key))))))
 
 (defn find-subpath
   [path prefix]
+  "Assume the path begins with the prefix, strip off the prefix, and strip off
+  a leading '/'."
   (let [subpath (.substring path (count prefix))]
     (if (= \/ (first subpath))
       (.substring subpath 1)
@@ -124,23 +144,23 @@
   [storage bucket key path]
   (doseq [file (file-seq (io/file path))]
     (if (.isFile file)
-      (let [fullpath (.getAbsolutePath file)
-            subpath (find-subpath fullpath path)
-            subkey (join-path [key subpath])]
+      (let [fullpath (.getAbsolutePath file) ; local absolute path for child file
+            subpath (find-subpath fullpath path) ; local name relative to path
+            subkey (join-path [key subpath])] ; remote absolute name for child file
         (upload! storage bucket subkey fullpath)))))
 
 (defn download!
   "Download from the cloud storage bucket and key to the provided path."
   [^Storage storage bucket key path]
   (let [blob-id ^BlobId (BlobId/of bucket key)
-        blob ^Blob (.get storage blob-id)
+        blob ^Blob (.get storage blob-id) ; TODO: get a list of blob IDs in one request
         file (io/file path)
         base (io/file (.getParent file))
         remote-path (str bucket ":" key)]
     (.mkdirs base)
     (if blob
       (try
-        (.downloadTo blob (get-path path))  ; TODO(jerry): "This method is replaced with downloadTo(Path, BlobSourceOption...), but is kept here for binary compatibility with the older versions of the client library."
+        (.downloadTo blob (get-path path))
         (catch StorageException e
           (log/exception! e "failed to download" remote-path "to" path)))
       (log/error! "file unavailable to download" remote-path))))
