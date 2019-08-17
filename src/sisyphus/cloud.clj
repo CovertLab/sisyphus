@@ -72,24 +72,34 @@
             (io/delete-file path))
           (recur (rest paths)))))))
 
+(def dirname-cache (atom #{}))
+
+(defn cache-dirname
+  "Insert the bucket:key into dirname-cache. Return true if it was already there."
+  [bucket dir]
+  (let [dirname (str bucket ":" dir)
+        previous (first (swap-vals! dirname-cache conj dirname))]
+    (contains? previous dirname)))
+
 (defn make-dir!
-  "Make a storage 'directory/' entry if it's absent."
-  ; TODO(jerry): Cache created directory names for a while to reduce repeats.
+  "Make a storage 'directory/' entry if it wasn't created recently and it's absent."
+  ; TODO(jerry): When to clear the cache?
   [^Storage storage bucket key]
   (let [dir-name (dir-slash key)]
-    (try
-      (let [blob-info (-> (BlobInfo/newBuilder bucket dir-name 0) ; match gen 0 means if-absent
-                          (.setContentType default-content-type)
-                          .build)
-            options (into-array [(Storage$BlobTargetOption/generationMatch)])]
-        ; (println "make-dir!" dir-name) ; *** DEBUG ***
-        (.create storage blob-info options)
-        :created)
-      (catch StorageException e
-        (when-not (string/includes? (.getMessage e) "Precondition Failed")
-          (log/exception! e "failed to make-dir" (str bucket ":" dir-name))
-          :failed)
-        :present))))
+    (when-not (cache-dirname bucket dir-name)
+      (try
+        (let [blob-info (-> (BlobInfo/newBuilder bucket dir-name 0) ; match gen 0 means if-absent
+                            (.setContentType default-content-type)
+                            .build)
+              options (into-array [(Storage$BlobTargetOption/generationMatch)])]
+          (log/debug! "mkdir" dir-name) ; *** DEBUG temporary ***
+          (.create storage blob-info options)
+          :created)
+        (catch StorageException e
+          (when-not (string/includes? (.getMessage e) "Precondition Failed")
+            (log/exception! e "mkdir failed" (str bucket ":" dir-name))
+            :failed)
+          :present)))))
 
 (defn make-dirs!
   "Make a storage 'key/' entry if last?, and its parents, if absent."
@@ -124,7 +134,7 @@
                          .build)
            options (make-array Storage$BlobTargetOption 0)
            bytes (slurp-bytes path)]
-       ; (println "uploading" key) ; *** DEBUG ***
+       (log/debug! "uploading" key) ; *** DEBUG temporary ***
        (.create storage blob-info bytes options)
        (make-dirs! storage bucket key false)
        blob-info)
