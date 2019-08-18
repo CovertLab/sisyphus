@@ -7,6 +7,7 @@
    [java.io File FileInputStream]
    [com.google.cloud.storage
     Storage StorageOptions StorageException
+    Storage$BlobField
     Storage$BlobListOption
     Storage$BlobTargetOption
     Bucket BucketInfo
@@ -165,12 +166,12 @@
   "Download from the cloud storage bucket and key to the provided path."
   [^Storage storage bucket key path]
   (let [blob-id ^BlobId (BlobId/of bucket key)
-        blob ^Blob (.get storage blob-id) ; TODO: get a list of blob IDs in one request
+        blob ^Blob (.get storage blob-id)
         file (io/file path)
         base (io/file (.getParent file))
         remote-path (str bucket ":" key)]
     (if blob
-      (if (is-directory-path? path)
+      (if (or (is-directory-path? key) (is-directory-path? path))
         (.mkdirs file)
         (try
           (.mkdirs base)
@@ -180,21 +181,29 @@
       (log/error! "file unavailable to download" remote-path))))
 
 (defn directory-options
+  "Storage options to list a directory and get desired fields of its entries."
   [directory]
   (into-array
    Storage$BlobListOption
-   [(Storage$BlobListOption/prefix directory)]))
+   [(Storage$BlobListOption/prefix directory)
+    (Storage$BlobListOption/fields
+     (into-array [Storage$BlobField/NAME
+                  Storage$BlobField/GENERATION
+                  Storage$BlobField/SIZE]))]))
 
 (defn list-directory
+  ; TODO(jerry): Return the BLOBS instead of their name strings to save a round
+  ; trip per BLOB.
   [storage bucket directory]
   (let [options (directory-options directory)
         blobs (.list storage bucket options)]
     (map
      #(.getName %)
-     (.getValues blobs))))
+     (.getValues blobs)))) ; TODO(jerry): .iterateAll for the values in ALL pages?
 
 (defn download-tree!
   [storage bucket key path]
+  ; ASSUMES the directory key ends with "/".
   (let [remote-keys (list-directory storage bucket key)
         preamble (inc (count key))]
     (doseq [remote-key remote-keys]
