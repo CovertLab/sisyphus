@@ -8,6 +8,7 @@
    [com.google.cloud.storage
     Storage StorageOptions StorageException
     Storage$BlobField
+    Storage$BlobGetOption
     Storage$BlobListOption
     Storage$BlobTargetOption
     Bucket BucketInfo
@@ -162,23 +163,14 @@
             subkey (join-path [key subpath])] ; remote absolute name for child file
         (upload! storage bucket subkey fullpath)))))
 
-(defn download!
-  "Download from the cloud storage bucket and key to the provided path."
-  [^Storage storage bucket key path]
-  (let [blob-id ^BlobId (BlobId/of bucket key)
-        blob ^Blob (.get storage blob-id)
-        file (io/file path)
-        base (io/file (.getParent file))
-        remote-path (str bucket ":" key)]
-    (if blob
-      (if (or (is-directory-path? key) (is-directory-path? path))
-        (.mkdirs file)
-        (try
-          (.mkdirs base)
-          (.downloadTo blob (get-path path))
-          (catch StorageException e
-            (log/exception! e "failed to download" remote-path "to" path))))
-      (log/error! "file unavailable to download" remote-path))))
+(def blob-fields
+  "Desired fields when getting/listing Blobs. BUCKET and NAME are implied but
+  it's useful to be explicit about the results."
+  (into-array
+   [Storage$BlobField/BUCKET
+    Storage$BlobField/NAME
+    Storage$BlobField/GENERATION
+    Storage$BlobField/SIZE]))
 
 (defn directory-options
   "Storage options to list a directory and get desired fields of its entries."
@@ -186,27 +178,51 @@
   (into-array
    Storage$BlobListOption
    [(Storage$BlobListOption/prefix directory)
-    (Storage$BlobListOption/fields
-     (into-array [Storage$BlobField/NAME
-                  Storage$BlobField/GENERATION
-                  Storage$BlobField/SIZE]))]))
+    (Storage$BlobListOption/fields blob-fields)]))
 
-(defn list-directory
-  ; TODO(jerry): Return the BLOBS instead of their name strings to save a round
-  ; trip per BLOB.
-  [storage bucket directory]
-  (let [options (directory-options directory)
+(defn download-blob!
+  "Download a Blob (file or directory) from the cloud storage bucket to the
+  local path. The Blob must have BUCKET and NAME fields."
+  [^Blob blob path]
+  (let [file (io/file path)
+        base (.getParentFile file)
+        key (.getName blob)
+        remote-path (str (.getBucket blob) ":" key)
+        directory? (or (is-directory-path? key) (is-directory-path? path))]
+    (if directory?
+      (.mkdirs file)
+      (try
+        (.mkdirs base)
+        (.downloadTo blob (.toPath file))
+        (catch StorageException e
+          (log/exception! e "failed to download" remote-path "to" path))))))
+
+(defn download!
+  "Download a named object from the cloud storage bucket to the local path."
+  [^Storage storage bucket key path]
+  (let [blob-id ^BlobId (BlobId/of bucket key)
+        options (into-array [(Storage$BlobGetOption/fields blob-fields)])
+        blob ^Blob (.get storage blob-id options)
+        remote-path (str bucket ":" key)]
+    (if blob
+      (download-blob! blob path)
+      (log/error! "file unavailable to download" remote-path))))
+
+(defn list-prefix
+  "List cloud storage contents in a bucket with a prefix (acting as a directory).
+  Return a Blob iterator."
+  [storage bucket prefix]
+  (let [options (directory-options prefix)
         blobs (.list storage bucket options)]
-    (map
-     #(.getName %)
-     (.getValues blobs)))) ; TODO(jerry): .iterateAll for the values in ALL pages?
+    (.iterateAll blobs)))
 
 (defn download-tree!
   [storage bucket key path]
-  ; ASSUMES the directory key ends with "/".
-  (let [remote-keys (list-directory storage bucket key)
+  ; ASSUMES the key doesn't end with "/" but it names an entry that does end with "/".
+  (let [blobs (list-prefix storage bucket key)
         preamble (inc (count key))]
-    (doseq [remote-key remote-keys]
-      (let [local-key (.substring remote-key preamble)
+    (doseq [blob blobs]
+      (let [remote-key (.getName blob)
+            local-key (.substring remote-key preamble)
             local-path (join-path [path local-key])]
-        (download! storage bucket remote-key local-path)))))
+        (download-blob! blob local-path)))))
