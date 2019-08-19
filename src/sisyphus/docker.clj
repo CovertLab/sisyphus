@@ -76,6 +76,7 @@
     (.memory host-config memory-limit)
     (.memorySwap host-config memory-limit)
     (.kernelMemory host-config memory-limit)
+    (.memoryReservation host-config memory-limit)
 
     (when-let [ports (:ports config)]
       (.portBindings host-config (port-mapping ports))

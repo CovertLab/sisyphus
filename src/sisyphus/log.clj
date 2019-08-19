@@ -9,7 +9,7 @@
     [com.google.cloud.logging LogEntry LogEntry$Builder Logging LoggingOptions
      Logging$WriteOption Payload Payload$StringPayload Severity]))
 
-(def log-truncation 5000)
+(def log-truncation 50000)
 
 (defn gce-metadata
   "Retrieve a GCE instance metadata field."
