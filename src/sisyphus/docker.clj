@@ -72,13 +72,6 @@
   [config]
   (let [host-config (HostConfig/builder)
         container-config (ContainerConfig/builder)]
-
-    ;; ;; set memory limit
-    ;; (.memory host-config memory-limit)
-    ;; (.memorySwap host-config memory-swap)
-    ;; (.kernelMemory host-config memory-swap)
-    ;; (.memoryReservation host-config memory-limit)
-
     (when-let [ports (:ports config)]
       (.portBindings host-config (port-mapping ports))
       (.exposedPorts (exposed-ports ports)))
