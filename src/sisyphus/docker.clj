@@ -56,6 +56,8 @@
      (str from ":" to))
    mounts))
 
+(def memory-limit 17179869184)
+
 (defn build-config
   "Given a config map for running a docker container, create and return the config
    object required by the java docker client. Options for config are:
@@ -69,7 +71,12 @@
   [config]
   (let [host-config (HostConfig/builder)
         container-config (ContainerConfig/builder)]
-    (.memory host-config 17179869184)
+
+    ;; set memory limit
+    (.memory host-config memory-limit)
+    (.memorySwap host-config memory-limit)
+    (.kernelMemory host-config memory-limit)
+
     (when-let [ports (:ports config)]
       (.portBindings host-config (port-mapping ports))
       (.exposedPorts (exposed-ports ports)))
