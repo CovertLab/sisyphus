@@ -57,6 +57,7 @@
    mounts))
 
 (def memory-limit 17179869184)
+(def memory-swap 34359738368)
 
 (defn build-config
   "Given a config map for running a docker container, create and return the config
@@ -74,8 +75,8 @@
 
     ;; set memory limit
     (.memory host-config memory-limit)
-    (.memorySwap host-config memory-limit)
-    (.kernelMemory host-config memory-limit)
+    (.memorySwap host-config memory-swap)
+    (.kernelMemory host-config memory-swap)
     (.memoryReservation host-config memory-limit)
 
     (when-let [ports (:ports config)]
