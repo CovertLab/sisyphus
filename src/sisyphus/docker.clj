@@ -69,6 +69,7 @@
   [config]
   (let [host-config (HostConfig/builder)
         container-config (ContainerConfig/builder)]
+    (.memory host-config 16777216)
     (when-let [ports (:ports config)]
       (.portBindings host-config (port-mapping ports))
       (.exposedPorts (exposed-ports ports)))
