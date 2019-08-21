@@ -24,7 +24,8 @@
   "Connect to the cloud storage service given the options specified in the config map."
   [config]
   (let [storage (.getService (StorageOptions/getDefaultInstance))]
-    storage))
+    {:storage storage
+     :dirname-cache (atom #{})}))
 
 (defn get-path
   "Get the java.nio.file.Path object corresponding to the provided absolute
@@ -78,11 +79,15 @@
             (io/delete-file path))
           (recur (rest paths)))))))
 
-(def dirname-cache (atom #{}))
+(defn exists?
+  [{:keys [^Storage storage]} bucket key]
+  (let [blob-id (BlobId/of bucket key)
+        blob (.get storage blob-id)]
+    (.exists blob)))
 
 (defn cache-dirname
   "Insert the bucket:key into dirname-cache. Return true if it was already there."
-  [bucket dir]
+  [dirname-cache bucket dir]
   (let [dirname (str bucket ":" dir)
         previous (first (swap-vals! dirname-cache conj dirname))]
     (contains? previous dirname)))
@@ -90,9 +95,9 @@
 (defn make-dir!
   "Make a storage 'directory/' entry if it wasn't created recently and it's absent."
   ; TODO(jerry): When to clear the cache?
-  [^Storage storage bucket key]
+  [{:keys [^Storage storage dirname-cache]} bucket key]
   (let [dir-name (dir-slash key)]
-    (when-not (cache-dirname bucket dir-name)
+    (when-not (cache-dirname dirname-cache bucket dir-name)
       (try
         (let [blob-info (-> (BlobInfo/newBuilder bucket dir-name 0) ; match gen 0 means if-absent
                             (.setContentType default-content-type)
@@ -108,9 +113,9 @@
 
 (defn make-dirs!
   "Make a storage 'key/' entry if last?, and its parents, if absent."
-  ([^Storage storage bucket key]
-   (make-dirs! storage bucket key false))
-  ([^Storage storage bucket key last?]
+  ([state bucket key]
+   (make-dirs! state bucket key false))
+  ([{:keys [^Storage storage]} bucket key last?]
    (let [java-file (io/file key)
          parent (.getParent java-file)]
      (if parent
@@ -130,9 +135,9 @@
   "Upload the file at the given local filesystem path to the cloud storage bucket and key."
   ; TODO(jerry): If the files get big, use storage.writer() and a truncated
   ; exponential backoff retry loop.
-  ([^Storage storage bucket key path]
-   (upload! storage bucket key path {:content-type default-content-type}))
-  ([storage bucket key path {:keys [content-type]}]
+  ([state bucket key path]
+   (upload! state bucket key path {:content-type default-content-type}))
+  ([{:keys [^Storage storage]} bucket key path {:keys [content-type]}]
    (try
      (let [blob-info (-> (BlobInfo/newBuilder bucket key)
                          (.setContentType (or content-type default-content-type))
@@ -155,7 +160,7 @@
       subpath)))
 
 (defn upload-tree!
-  [storage bucket key path]
+  [{:keys [^Storage storage]} bucket key path]
   (doseq [file (file-seq (io/file path))]
     (if (.isFile file)
       (let [fullpath (.getAbsolutePath file) ; local absolute path for child file
@@ -199,7 +204,7 @@
 
 (defn download!
   "Download a named object from the cloud storage bucket to the local path."
-  [^Storage storage bucket key path]
+  [{:keys [^Storage storage]} bucket key path]
   (let [blob-id ^BlobId (BlobId/of bucket key)
         options (into-array [(Storage$BlobGetOption/fields blob-fields)])
         blob ^Blob (.get storage blob-id options)
@@ -211,13 +216,21 @@
 (defn list-prefix
   "List cloud storage contents in a bucket with a prefix (acting as a directory).
   Return a Blob iterator."
-  [storage bucket prefix]
+  [{:keys [^Storage storage]} bucket prefix]
   (let [options (directory-options prefix)
         blobs (.list storage bucket options)]
     (.iterateAll blobs)))
 
+(defn list-directory
+  "Return a list of storage keys in bucket:path format from the provided directory"
+  [state bucket directory]
+  (map
+   (fn [x]
+     (str bucket ":" (.getName x)))
+   (list-prefix state bucket directory)))
+
 (defn download-tree!
-  [storage bucket key path]
+  [{:keys [^Storage storage]} bucket key path]
   ; ASSUMES the key doesn't end with "/" but it names an entry that does end with "/".
   (let [blobs (list-prefix storage bucket key)
         preamble (inc (count key))]
@@ -226,3 +239,4 @@
             local-key (.substring remote-key preamble)
             local-path (join-path [path local-key])]
         (download-blob! blob local-path)))))
+
