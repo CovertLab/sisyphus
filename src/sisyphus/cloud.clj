@@ -118,8 +118,8 @@
      (if last?
        (make-dir! storage bucket (.getPath java-file))))))
 
-(defn slurp-bytes
-  "Slurp a byte array from anything that clojure.java.io/input-stream can read."
+(defn read-bytes
+  "Fully read a byte array from anything that clojure.java.io/input-stream can read."
   [readable]
   (with-open [in (clojure.java.io/input-stream readable)
               out (java.io.ByteArrayOutputStream.)]
@@ -138,7 +138,7 @@
                          (.setContentType (or content-type default-content-type))
                          .build)
            options (make-array Storage$BlobTargetOption 0)
-           bytes (slurp-bytes path)]
+           bytes (read-bytes path)]
        (.create storage blob-info bytes options)
        (make-dirs! storage bucket key false)
        blob-info)

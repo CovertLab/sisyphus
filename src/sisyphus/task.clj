@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as string]
    [clojure.java.io :as io]
+   [clojure.java.shell :as shell]
    [cheshire.core :as json]
    [sisyphus.archive :as archive]
    [sisyphus.cloud :as cloud]
@@ -25,6 +26,8 @@
   #{">" "STDOUT"})
 
 (defn find-local!
+  "Make the named input or output file or directory so mounting it in
+  Docker will work right, e.g. it won't assume it's going to be a directory."
   [root [remote internal]]
   (let [[bucket key] (split-key remote)
         input (io/file root key)
@@ -136,6 +139,19 @@
    kafka task status
    (assoc message :exception (.toString throwable)) :status-topic))
 
+(defn shell-out
+  [& tokens]
+  "Shell out for a single line of text."
+  (.trim (:out (apply shell/sh tokens))))
+
+(def uid_gid
+  "The current process' uid:gid numbers. Make this the Docker --user so the
+  command will create files with the same ownership and also not run as root
+  with too much host access. The only user and group info shared in/out of the
+  container are these id numbers. This user and group don't even need to be
+  created in the container."
+  (str (shell-out "id" "-u") ":" (shell-out "id" "-g")))
+
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
    execute the task specified by the given `task` map, downloading all inputs from cloud
@@ -144,7 +160,6 @@
   [{:keys [storage kafka docker config state]} task]
   (try
     (let [root (get-in config [:local :root])
-          user (or (System/getenv "USER") "root")
           inputs (find-locals! (str root "/inputs") (:inputs task))
           outputs (find-locals! (str root "/outputs") (:outputs task))
 
@@ -163,8 +178,7 @@
          (let [mounted (concat inputs (remove :stdout? outputs))
                mounts (mount-map mounted :local :internal)
                config {:image image
-                       ;; TODO: get sisyphus user to work in docker container
-                       ;; :user user
+                       :user uid_gid
                        :mounts mounts
                        :command command}
 
