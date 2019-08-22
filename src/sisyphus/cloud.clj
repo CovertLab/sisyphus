@@ -12,7 +12,8 @@
     Storage$BlobListOption
     Storage$BlobTargetOption
     Bucket BucketInfo
-    Blob BlobId BlobInfo]))
+    Blob BlobId BlobInfo
+    Blob$BlobSourceOption]))
 
 (def default-content-type "application/octet-stream")
 
@@ -79,11 +80,29 @@
             (io/delete-file path))
           (recur (rest paths)))))))
 
+(defn blob-id
+  "Get the blob id for this bucket/key combination"
+  [[bucket key]]
+  (BlobId/of bucket key))
+
 (defn exists?
+  "Check to see if key exists in bucket"
   [{:keys [^Storage storage]} bucket key]
-  (let [blob-id (BlobId/of bucket key)
-        blob (.get storage blob-id)]
-    (.exists blob)))
+  (let [bid (blob-id [bucket key])
+        blob (.get storage bid)]
+    (.exists blob (into-array Blob$BlobSourceOption []))))
+
+(defn partition-keys
+  [{:keys [^Storage storage]} data]
+  (let [bids (map (comp blob-id split-key) data)
+        existence (.get storage bids)]
+    (reduce
+     (fn [[exist non] [key blob]]
+       (if blob
+         [(conj exist key) non]
+         [exist (conj non key)]))
+     [[] []]
+     (map vector data existence))))
 
 (defn cache-dirname
   "Insert the bucket:key into dirname-cache. Return true if it was already there."
@@ -205,9 +224,9 @@
 (defn download!
   "Download a named object from the cloud storage bucket to the local path."
   [{:keys [^Storage storage]} bucket key path]
-  (let [blob-id ^BlobId (BlobId/of bucket key)
+  (let [bid ^BlobId (blob-id [bucket key])
         options (into-array [(Storage$BlobGetOption/fields blob-fields)])
-        blob ^Blob (.get storage blob-id options)
+        blob ^Blob (.get storage bid options)
         remote-path (str bucket ":" key)]
     (if blob
       (download-blob! blob path)
