@@ -178,7 +178,14 @@
          (let [mounted (concat inputs (remove :stdout? outputs))
                mounts (mount-map mounted :local :internal)
                config {:image image
-                       :user uid_gid
+                       ;; TODO: Run the container with the same uid:gid as the
+                       ;; host, not as root, so the outputs can be deleted BUT
+                       ;; the Theano pip expects to be able to write into its
+                       ;; site-packages dir, so we'd have to install it with the
+                       ;; same (unpredictable) uid:gid, or maybe initialize it
+                       ;; with root and open up "other" access to those dirs.
+                       ;;
+                       ;; :user uid_gid
                        :mounts mounts
                        :command command}
 
