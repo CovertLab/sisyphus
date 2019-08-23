@@ -134,13 +134,13 @@
   "Make a storage 'key/' entry if last?, and its parents, if absent."
   ([state bucket key]
    (make-dirs! state bucket key false))
-  ([{:keys [^Storage storage]} bucket key last?]
+  ([state bucket key last?]
    (let [java-file (io/file key)
          parent (.getParent java-file)]
      (if parent
-       (make-dirs! storage bucket parent true))
+       (make-dirs! state bucket parent true))
      (if last?
-       (make-dir! storage bucket (.getPath java-file))))))
+       (make-dir! state bucket (.getPath java-file))))))
 
 (defn read-bytes
   "Fully read a byte array from anything that clojure.java.io/input-stream can read."
@@ -156,7 +156,7 @@
   ; exponential backoff retry loop.
   ([state bucket key path]
    (upload! state bucket key path {:content-type default-content-type}))
-  ([{:keys [^Storage storage]} bucket key path {:keys [content-type]}]
+  ([{:keys [^Storage storage] :as state} bucket key path {:keys [content-type]}]
    (try
      (let [blob-info (-> (BlobInfo/newBuilder bucket key)
                          (.setContentType (or content-type default-content-type))
@@ -164,7 +164,7 @@
            options (make-array Storage$BlobTargetOption 0)
            bytes (read-bytes path)]
        (.create storage blob-info bytes options)
-       (make-dirs! storage bucket key false)
+       (make-dirs! state bucket key false)
        blob-info)
      (catch StorageException e
        (log/exception! e "failed to upload" path "to" (str bucket ":" key))))))
@@ -179,13 +179,13 @@
       subpath)))
 
 (defn upload-tree!
-  [{:keys [^Storage storage]} bucket key path]
+  [state bucket key path]
   (doseq [file (file-seq (io/file path))]
     (if (.isFile file)
       (let [fullpath (.getAbsolutePath file) ; local absolute path for child file
             subpath (find-subpath fullpath path) ; local name relative to path
             subkey (join-path [key subpath])] ; remote absolute name for child file
-        (upload! storage bucket subkey fullpath)))))
+        (upload! state bucket subkey fullpath)))))
 
 (def blob-fields
   "Desired fields when getting/listing Blobs. BUCKET and NAME are implied but
@@ -249,9 +249,9 @@
    (list-prefix state bucket directory)))
 
 (defn download-tree!
-  [{:keys [^Storage storage]} bucket key path]
+  [state bucket key path]
   ; ASSUMES the key doesn't end with "/" but it names an entry that does end with "/".
-  (let [blobs (list-prefix storage bucket key)
+  (let [blobs (list-prefix state bucket key)
         preamble (inc (count key))]
     (doseq [blob blobs]
       (let [remote-key (.getName blob)

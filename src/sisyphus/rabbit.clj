@@ -115,6 +115,7 @@
           consumer (start-consumer!
                     rabbit
                     (fn [s]
+                      (log/info! "RABBIT:" s)
                       (swap! maw conj s)))
           signal (reify sun.misc.SignalHandler
                    (handle [this signal]
