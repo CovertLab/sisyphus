@@ -252,10 +252,10 @@
   [state bucket key path]
   ; ASSUMES the key doesn't end with "/" but it names an entry that does end with "/".
   (let [blobs (list-prefix state bucket key)
-        preamble (inc (count key))]
+        preamble (count key)
+        preamble (if (is-directory-path? key) preamble (inc preamble))]
     (doseq [blob blobs]
       (let [remote-key (.getName blob)
             local-key (.substring remote-key preamble)
             local-path (join-path [path local-key])]
         (download-blob! blob local-path)))))
-
