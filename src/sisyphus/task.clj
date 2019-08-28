@@ -34,8 +34,8 @@
         local (.getAbsolutePath input)
         archive (str local ".tar.gz")
         stdout? (stdout-tokens internal)
-        directory? (archive/directory-path? internal)
-        intern (archive/trim-slash internal)]
+        directory? (cloud/is-directory-path? internal)
+        intern (cloud/trim-slash internal)]
     (try
       (cloud/delete-tree! [(.getAbsolutePath input)])
       (catch Exception e

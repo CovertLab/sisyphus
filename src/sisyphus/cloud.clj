@@ -35,14 +35,24 @@
   (.toPath (File. path)))
 
 (defn is-directory-path?
+  "Return true if the given pathname is a directory."
   [path]
   (= (last path) \/))
 
 (defn dir-slash
+  "Append a / if needed to the directory path. (A GCS 'directory' entry is just
+  a file whose name ends with /.)"
   [path]
   (if (is-directory-path? path)
     path
     (str path "/")))
+
+(defn trim-slash
+  "Trim the trailing / off a pathname, if present."
+  [path]
+  (if (is-directory-path? path)
+    (.substring path 0 (dec (.length path)))
+    path))
 
 (defn split-key
   [key]
@@ -93,6 +103,7 @@
     (.exists blob (into-array Blob$BlobSourceOption []))))
 
 (defn partition-keys
+  "Partition bucket:key path strings into existing and not existing paths."
   [{:keys [^Storage storage]} data]
   (let [bids (map (comp blob-id split-key) data)
         existence (.get storage bids)]
@@ -226,15 +237,14 @@
   [{:keys [^Storage storage]} bucket key path]
   (let [bid ^BlobId (blob-id [bucket key])
         options (into-array [(Storage$BlobGetOption/fields blob-fields)])
-        blob ^Blob (.get storage bid options)
-        remote-path (str bucket ":" key)]
+        blob ^Blob (.get storage bid options)]
     (if blob
       (download-blob! blob path)
-      (log/error! "file unavailable to download" remote-path))))
+      (log/error! "file unavailable to download" (str bucket ":" key)))))
 
 (defn list-prefix
-  "List cloud storage contents in a bucket with a prefix (acting as a directory).
-  Return a Blob iterator."
+  "List cloud storage contents in a bucket with the given prefix string (which
+  needn't be a directory name). Return a Blob iterator."
   [{:keys [^Storage storage]} bucket prefix]
   (let [options (directory-options prefix)
         blobs (.list storage bucket options)]
@@ -246,16 +256,16 @@
   (map
    (fn [x]
      (str bucket ":" (.getName x)))
-   (list-prefix state bucket directory)))
+   (list-prefix state bucket (dir-slash directory))))
 
 (defn download-tree!
+  "Download a file tree from the bucket:key directory to the local path."
   [state bucket key path]
-  ; ASSUMES the key doesn't end with "/" but it names an entry that does end with "/".
-  (let [blobs (list-prefix state bucket key)
-        preamble (count key)
-        preamble (if (is-directory-path? key) preamble (inc preamble))]
+  (let [directory (dir-slash key)
+        blobs (list-prefix state bucket directory)
+        prefix-length (count directory)]
     (doseq [blob blobs]
       (let [remote-key (.getName blob)
-            local-key (.substring remote-key preamble)
-            local-path (join-path [path local-key])]
+            relative-path (.substring remote-key prefix-length)
+            local-path (join-path [path relative-path])]
         (download-blob! blob local-path)))))
