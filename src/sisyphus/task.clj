@@ -178,10 +178,12 @@
          (let [mounted (concat inputs (remove :stdout? outputs))
                mounts (mount-map mounted :local :internal)
                config {:image image
-                       ;; Run the container with the host's uid:gid as the, not
-                       ;; as root, so the outputs can be deleted. So the Theano
-                       ;; pip can write into its site-packages dir, install it
-                       ;; with `umask 000` when building the container.
+                       ;; Run the container with the host's uid:gid, not as root,
+                       ;; so the app has limited permissions on the host and its
+                       ;; outputs can be deleted.
+                       ;; ASSUMES: Every directory that the app writes to must be
+                       ;; made world writeable when building the container, e.g.
+                       ;; /.theano /wcEcoli/fixtures
                        :user uid_gid
                        :mounts mounts
                        :command command}
