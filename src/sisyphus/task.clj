@@ -31,7 +31,6 @@
   "Delete the local file trees given their path strings. Log errors but proceed."
   [& paths]
   (doseq [path paths]
-   (log/debug! "deleting local path" path) ; temporary
    (try
      (cloud/delete-tree! [path])
      (catch java.io.IOException e
