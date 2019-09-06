@@ -78,7 +78,7 @@
    {} paths))
 
 (defn delete-tree!
-  "Extremely dangerous function"
+  "Delete the local file path trees."
   [paths]
   (when-let [path (first paths)]
     (let [file (io/file path)]

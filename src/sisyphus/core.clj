@@ -51,14 +51,14 @@
    (= "terminate" (:event message))))
 
 (defn sisyphus-handle-kafka
+  "Handle an incoming kafka message that might ask to terminate the task."
   [state topic message]
   (let [task (:task @(:state state))
-        {:keys [id docker-id]}
-        (select-keys task [:id :docker-id])]
+        {:keys [id docker-id]} task]
     (try
       (when (terminate? message id)
         (log/debug! "terminating step by request" id)
-        (docker/kill! (:docker state) docker-id)
+        (docker/stop! (:docker state) docker-id)
         (log/notice! "STEP TERMINATED BY REQUEST")
         (task/status! (:kafka state) task "step-terminated" message)
         (swap! (:state state) assoc :status :waiting :task {}))

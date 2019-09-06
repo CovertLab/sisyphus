@@ -23,7 +23,7 @@
 
 (defn connect!
   "Connect to the docker service provided by (:uri config)."
-  [config]
+  ^DockerClient [config]
   (if-let [uri (:uri config)]
     (docker/connect uri)
     (docker/connect)))
@@ -106,7 +106,7 @@
 
 (defn pull!
   "Pull the docker image given by the `image` argument."
-  [docker image]
+  [^DockerClient docker image]
   (log/info! "docker pull" image)
   (docker-retry 3 (fn [] (docker/pull docker image))))
 
@@ -116,8 +116,8 @@
 
 (defn create!
   "Create a docker container from the given options and return the container id."
-  ([docker] (create! docker {}))
-  ([docker options]
+  ([^DockerClient docker] (create! docker {}))
+  ([^DockerClient docker options]
    (let [config (build-config (merge default-options options))
          create (.createContainer docker config)]
      (docker-utils/format-id (.id create)))))
@@ -131,7 +131,7 @@
     (DockerClient$LogsParam/follow)]))
 
 (defn docker-logs
-  [docker id]
+  [^DockerClient docker id]
   (.logs docker id (logs-streams)))
 
 (defn iteration->seq
@@ -148,18 +148,19 @@
    (.decode StandardCharsets/UTF_8 bytes)))
 
 (defn logs-seq
-  "Convert a docker-client ^LogStream to a seq of lines."
+  "Convert a docker-client ^LogStream to a seq of strings."
   [logs]
   (let [it (iteration->seq logs)
         content (map #(decode-bytes (.content ^LogMessage %)) it)]
-    (mapcat #(string/split % #"\n") content)))
+    ; (mapcat #(string/split % #"\n") content)
+    content))
 
 (defn logs
-  [docker id]
+  [^DockerClient docker id]
   (logs-seq (docker-logs docker id)))
 
 (defn read-fully!
-  [docker id]
+  [^DockerClient docker id]
   (let [stream (.logs docker id (logs-streams))]
     (.readFully stream)))
 
@@ -173,31 +174,40 @@
     DockerClient$AttachParameter/STREAM]))
 
 (defn attach-logs
-  ([docker id] (attach-logs docker id System/out System/err))
-  ([docker id out err]
+  ([^DockerClient docker id] (attach-logs docker id System/out System/err))
+  ([^DockerClient docker id out err]
    (let [attach (.attachContainer docker id (attach-params))]
      (.attach attach out err true))))
 
 (defn start!
   "Start the docker container with the given id."
-  [docker id]
+  [^DockerClient docker id]
   (.startContainer docker id))
 
 (defn stop!
-  [docker id]
+  "Try to terminate a container's process. Force-kill it if that times out."
+  [^DockerClient docker id]
   (docker/stop docker id))
 
 (defn kill!
-  [docker id]
+  "Force-kill a container's process."
+  [^DockerClient docker id]
   (when id
     (.killContainer docker id)))
 
 (defn remove!
-  [docker id]
-  (.removeContainer docker id))
+  "Remove a container by id or name. Optionally force-kill its process."
+  ([^DockerClient docker id]
+   (remove! docker id false))
+  ([^DockerClient docker id force?]
+   (when force?
+     (try
+       (kill! docker id)
+       (catch DockerException e))) ; no problem if the container isn't running
+   (.removeContainer docker id)))
 
 (defn info
-  [docker id]
+  [^DockerClient docker id]
   (.inspectContainer docker id))
 
 (defn exit-code
@@ -213,7 +223,7 @@
 
 (defn exec!
   "Execute the given command in a running container."
-  [docker id command]
+  [^DockerClient docker id command]
   (let [exec (.execCreate
               docker id
               (into-array String command)
@@ -229,7 +239,7 @@
 (defn run-container!
   "Run a container with the given options. If :detach is provided, detach the running
    container from the main thread."
-  [docker options]
+  [^DockerClient docker options]
   (let [id (create! docker options)]
     (log/info! "docker-container" id)
     (start! docker id)
@@ -242,5 +252,5 @@
       (docker/wait-container docker id))))
 
 (defn wait!
-  [docker id]
+  [^DockerClient docker id]
   (docker/wait-container docker id))

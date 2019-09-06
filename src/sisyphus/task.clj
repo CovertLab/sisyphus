@@ -8,7 +8,9 @@
    [sisyphus.cloud :as cloud]
    [sisyphus.docker :as docker]
    [sisyphus.kafka :as kafka]
-   [sisyphus.log :as log]))
+   [sisyphus.log :as log])
+  (:import
+    [com.spotify.docker.client.exceptions DockerException]))
 
 (def full-name
   "Extract the string representation of the given keyword. This is an extension to the
@@ -25,6 +27,16 @@
 (def stdout-tokens
   #{">" "STDOUT"})
 
+(defn delete-local-trees!
+  "Delete the local file trees given their path strings. Log errors but proceed."
+  [& paths]
+  (doseq [path paths]
+   (log/debug! "deleting local path" path) ; temporary
+   (try
+     (cloud/delete-tree! [path])
+     (catch java.io.IOException e
+       (log/exception! e "couldn't delete local" path)))))
+
 (defn find-local!
   "Make the named input or output file or directory so mounting it in
   Docker will work right, e.g. it won't assume it's going to be a directory."
@@ -36,10 +48,6 @@
         stdout? (stdout-tokens internal)
         directory? (cloud/is-directory-path? internal)
         intern (cloud/trim-slash internal)]
-    (try
-      (cloud/delete-tree! [(.getAbsolutePath input)])
-      (catch Exception e
-        (log/exception! e "couldn't delete" (.getAbsolutePath input))))
     (if directory?
       (.mkdirs input)
       (let [base (io/file (.getParent input))]
@@ -144,100 +152,105 @@
   "Shell out for a single line of text."
   (.trim (:out (apply shell/sh tokens))))
 
-(def uid_gid
-  "The current process' uid:gid numbers. Make this the Docker --user so the
+(def uid-gid
+  "The current process' uid:gid numbers. Pass this to Docker --user so the
   command will create files with the same ownership and also not run as root
   with too much host access. The only user and group info shared in/out of the
   container are these id numbers. This user and group don't even need to be
   created in the container."
   (str (shell-out "id" "-u") ":" (shell-out "id" "-g")))
 
+(defn- report-task-completion
+  "Report task completion to Gaia and log it."
+  [task kafka code lines]
+  (if (zero? code)
+    (do
+      (log/notice! "STEP COMPLETED" (:workflow task) (:name task) task)
+      (status! kafka task "step-complete" {}))
+
+    (let [log (take-last 100 @lines)]
+      (log/notice! "STEP FAILED" (:workflow task) (:name task) log)
+      (status!
+       kafka task "step-error"
+       {:code code
+        :log log}))))
+
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
    execute the task specified by the given `task` map, downloading all inputs from cloud
    storage, executing the command in the specified container, and then uploading all
-   outputs back to storage."
+   outputs back to storage.
+
+   Run the container with the host's uid:gid, not as root, so the app has limited
+   permissions on the host and its outputs can be deleted.
+   ASSUMES: Every directory the app writes to within the container is world-writeable."
   [{:keys [storage kafka docker config state]} task]
   (try
     (let [root (get-in config [:local :root])
-          inputs (find-locals! (str root "/inputs") (:inputs task))
-          outputs (find-locals! (str root "/outputs") (:outputs task))
-
+          input-root (str root "/inputs")
+          output-root (str root "/outputs")
+          inputs (find-locals! input-root (:inputs task))
+          outputs (find-locals! output-root (:outputs task))
           image (:image task)
-          ;; commands (join-commands (:commands task))
+          command (:command task)]
 
-          command (or (:command task) (first-command (:commands task)))]
+      (try
+        (status! kafka task "step-start" {})
+        (docker/pull! docker image)
 
-         (status! kafka task "step-start" {})
+        (doseq [input inputs]
+          (pull-input! storage input))
 
-         (docker/pull! docker image)
+        (let [mounted (concat inputs (remove :stdout? outputs))
+              mounts (mount-map mounted :local :internal)
+              config {:image image
+                      :user uid-gid
+                      :mounts mounts
+                      :command command}
+              lines (atom [])
+              id (docker/create! docker config)]
 
-         (doseq [input inputs]
-           (pull-input! storage input))
+          (try
+            (swap! state assoc-in [:task :docker-id] id)
+            (log/info! "created container" id config)
+            (status! kafka task "container-create" {:docker-id id :docker-config config})
 
-         (let [mounted (concat inputs (remove :stdout? outputs))
-               mounts (mount-map mounted :local :internal)
-               config {:image image
-                       ;; Run the container with the host's uid:gid, not as root,
-                       ;; so the app has limited permissions on the host and its
-                       ;; outputs can be deleted.
-                       ;; ASSUMES: Every directory that the app writes to must be
-                       ;; made world writeable when building the container, e.g.
-                       ;; /.theano /wcEcoli/fixtures
-                       :user uid_gid
-                       :mounts mounts
-                       :command command}
+            (status! kafka task "execution-start" {:docker-id id})
+            (docker/start! docker id)
 
-               id (docker/create! docker config)
-               lines (atom [])]
+            (doseq [line (docker/logs docker id)]
+              (swap! lines conj line)
+              (log/info! line)) ; TODO(jerry): Detect stack tracebacks heuristically
 
-           (log/info! "created container" id config)
-           (status! kafka task "container-create" {:docker-id id :docker-config config})
-           (swap! state assoc-in [:task :docker-id] id)
+            (let [code (docker/exit-code (docker/info docker id))]
+              (log/log! (if (zero? code) log/debug log/error) "container exit code" code)
+              (status! kafka task "container-exit" {:docker-id id :code code})
 
-           (status! kafka task "execution-start" {:docker-id id})
-           (docker/start! docker id)
+              ; push the outputs to storage if the task succeeded; push stderr even on error
+              (doseq [output outputs]
+                (if (:stdout? output)
+                  (let [stdout (string/join "\n" @lines)]
+                    (spit (:local output) stdout)))
 
-           (doseq [line (docker/logs docker id)]
-             (swap! lines conj line)
-             (log/info! line)) ; TODO(jerry): Detect stack tracebacks heuristically;
+                (when (or (zero? code) (:stdout? output))
+                  (push-output! storage output)
 
-           (status!
-            kafka task "execution-complete"
-            {:docker-id id
-             :status (.toString (docker/info docker id))})
+                  (status!
+                   kafka task "data-complete"
+                   {:workflow (:workflow task)
+                    :path (:key output)
+                    :key (str (:bucket output) ":" (:key output))})))
 
-           (let [code (docker/exit-code (docker/info docker id))]
-             (log/log! (if (zero? code) log/notice log/error) "container exit code" code)
-             (status! kafka task "container-exit" {:docker-id id :code code})
+              (report-task-completion task kafka code lines))
 
-             ; push the outputs to storage if the task succeeded; push stderr even on error
-             (doseq [output outputs]
-               (if (:stdout? output)
-                 (let [stdout (string/join "\n" @lines)]
-                   (spit (:local output) stdout)))
-
-               (when (or (zero? code) (:stdout? output))
-                 (push-output! storage output)
-
-                 (status!
-                  kafka task "data-complete"
-                  {:workflow (:workflow task)
-                   :path (:key output)
-                   :key (str (:bucket output) ":" (:key output))})))
-
-             (if (zero? code)
-               (do
-                 (log/notice! "STEP COMPLETED" (:workflow task) (:name task) task)
-                 (status!
-                  kafka task "step-complete" {}))
-
-               (let [log (take-last 100 @lines)]
-                 (log/notice! "STEP FAILED" (:workflow task) (:name task) log)
-                 (status!
-                  kafka task "step-error"
-                  {:code code
-                   :log log}))))))
+            (finally
+              (swap! state assoc-in [:task :docker-id] nil)
+              (try
+                (docker/remove! docker id true)
+                (catch DockerException e
+                  (log/exception! e "docker/remove! failed"))))))
+        (finally
+          (delete-local-trees! input-root output-root))))
 
     (catch Exception e
       (log/exception! e "STEP FAILED")
