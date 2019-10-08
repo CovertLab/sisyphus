@@ -148,11 +148,11 @@
    (.decode StandardCharsets/UTF_8 bytes)))
 
 (defn logs-seq
-  "Convert a docker-client ^LogStream to a seq of strings."
+  "Convert a docker-client ^LogStream to a seq of lines."
   [logs]
   (let [it (iteration->seq logs)
         content (map #(decode-bytes (.content ^LogMessage %)) it)]
-    ; (mapcat #(string/split % #"\n") content)
+    (mapcat #(string/split % #"\n") content)
     content))
 
 (defn logs
