@@ -152,8 +152,7 @@
   [logs]
   (let [it (iteration->seq logs)
         content (map #(decode-bytes (.content ^LogMessage %)) it)]
-    (mapcat #(string/split % #"\n") content)
-    content))
+    (mapcat #(string/split % #"\n") content)))
 
 (defn logs
   [^DockerClient docker id]
