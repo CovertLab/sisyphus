@@ -53,15 +53,10 @@
 (defn sisyphus-handle-kafka
   "Handle an incoming kafka message that might ask to terminate the task."
   [state topic message]
-  (let [task (:task @(:state state))
-        {:keys [id docker-id]} task]
+  (let [id (get-in [:task :id] @(:state state))]
     (try
       (when (terminate? message id)
-        (log/debug! "terminating step by request" id)
-        (docker/stop! (:docker state) docker-id)
-        (log/notice! "STEP TERMINATED BY REQUEST")
-        (task/status! (:kafka state) task "step-terminated" message)
-        (swap! (:state state) assoc :status :waiting :task {}))
+        (task/kill! state "by request"))
       (catch Exception e
         (log/exception! e "STEP TERMINATION FAILED" id)))))
 
@@ -93,7 +88,7 @@
     (str log/gce-instance-name "." workflow-name "." task-name)))
 
 (defn sisyphus-handle-rabbit
-  "Handle an incoming task message by running the requested step."
+  "Handle an incoming request from RabbitMQ to run a task (aka step)."
   [state raw]
   (let [task (json/parse-string raw true)
         tag (task-tag task)]
@@ -110,6 +105,8 @@
   (let [docker (docker/connect! (:docker config))
         storage (cloud/connect-storage! (:storage config))
         rabbit (rabbit/connect! (:rabbit config))
+        ; TODO: A state map containing a state map is too confusing. The key
+        ; names are the only thing we have for navigating the data.
         state {:config config
                :docker docker
                :storage storage

@@ -174,6 +174,17 @@
        {:code code
         :log log}))))
 
+(defn kill!
+  "Kill the task's docker process. Let perform-task! finish up."
+  [{:keys [docker kafka state]} reason]
+  (when-let [task (:task @state)
+             docker-id (:docker-id task)]
+    (log/debug! "terminating step" reason)
+    (docker/stop! docker docker-id)
+    (swap! state assoc-in [:task :docker-id] nil)  ; prevent double-kill
+    (log/notice! "STEP TERMINATED" reason)
+    (status! kafka task "step-terminated" {})))
+
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
    execute the task specified by the given `task` map, downloading all inputs from cloud
