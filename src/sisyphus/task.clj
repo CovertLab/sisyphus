@@ -240,7 +240,8 @@
             note (str "ELAPSED " (format-duration elapsed-duration)
                       (if cancelled? "; CANCELLED by the " " out of the ")
                       (format-duration timeout-duration) " timeout")]
-        (swap! lines conj "" note)))))
+        (swap! lines conj "" note)
+        (log/info! note)))))
 
 (defn perform-task!
   "Given a state containing a connection to both cloud storage and some docker service, 
