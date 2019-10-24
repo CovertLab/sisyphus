@@ -37,12 +37,6 @@
     (catch Exception e
       (log/exception! e "exception while shutting down"))))
 
-(defn timer
-  [wait f]
-  (future
-    (Thread/sleep wait)
-    (f)))
-
 (defn terminate?
   [message id]
   (and
@@ -51,9 +45,9 @@
    (= "terminate" (:event message))))
 
 (defn sisyphus-handle-kafka
-  "Handle an incoming kafka message that might ask to terminate the task."
+  "Handle an incoming request via kafka to terminate a task."
   [state topic message]
-  (let [id (get-in [:task :id] @(:state state))]
+  (let [id (get-in @(:state state) [:task :id])]
     (try
       (when (terminate? message id)
         (task/kill! state "by request"))
@@ -61,13 +55,14 @@
         (log/exception! e "STEP TERMINATION FAILED" id)))))
 
 (defn apoptosis-timer
+  "Start a timer to self-destruct this server if it remains idle."
   [delay]
-  (timer delay apoptosis))
+  (task/make-timer delay apoptosis))
 
 (defn run-state!
   [state task]
   (if-let [time (:timer state)]
-    (future-cancel time))
+    (task/cancel-timer time))
   (assoc
    state
    :task task
@@ -89,6 +84,17 @@
 
 (defn sisyphus-handle-rabbit
   "Handle an incoming request from RabbitMQ to run a task (aka step)."
+  ; TODO(jerry): To clarify/simplify, don't pass task to perform-task! in
+  ; addition to the copy that's in state. Put :docker-id in state rather than in
+  ; (:task state) since it's not part of the task spec and having varying copies
+  ; asks for trouble.
+  ;
+  ; TODO(jerry): Document the task message payload
+  ;   {
+  ;    ; required:
+  ;    :id "id" :workflow "w" :name "n" :image "d" :command "c"
+  ;    ; optional:
+  ;    :inputs [i] :outputs [o] :timeout milliseconds}.
   [state raw]
   (let [task (json/parse-string raw true)
         tag (task-tag task)]

@@ -155,6 +155,7 @@
     (mapcat #(string/split % #"\n") content)))
 
 (defn logs
+  "Return a lazy seq of log lines."
   [^DockerClient docker id]
   (logs-seq (docker-logs docker id)))
 
