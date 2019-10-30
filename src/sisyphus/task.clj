@@ -195,35 +195,33 @@
 
 (defn- terminating-state
   "Return the new state-map for an attempted state transition from :running
-  to/towards a termination status. If the task id matches then status goes
+  to/towards a termination status. If the task id matches, then status goes
   :starting -> :terminate-when-ready, or :running -> terminating-status, or no
-  change. In the result, :action indicates the state transition action -- :kill
-  to kill the process now, nil to do nothing, or else the status to set upon
-  killing the process when ready."
+  change. A transition to :action = :kill means it's time to kill the process;
+  another value is the termination status when the process is ready to kill."
   [state-map task-id termination-status]
   (cond
     (not (and task-id (= task-id (:id (:task state-map)))))
-    (assoc state-map :action nil)
-
-    (= (:status state-map) :running)
-    (assoc state-map :status termination-status :action :kill)
+    state-map
 
     (= (:status state-map) :starting)
     (assoc state-map :status :terminate-when-ready :action termination-status)
+
+    (= (:status state-map) :running)
+    (assoc state-map :status termination-status :action :kill)
 
     :else
     state-map))
 
 (defn- terminate!
-  "Terminate the task's docker process if it's running and atomically set status
-  to track how it finished and to prevent double-termination.
+  "Terminate the task's docker process if it's running; setting status to track
+  how it finished and prevent double-termination. Call this in a forked thread.
   (perform-task! will finish up soon.)"
   [{:keys [docker kafka state]} task-id termination-status]
-  (let [new-state (swap! state terminating-state task-id termination-status)
-        task (:task new-state)
-        docker-id (:docker-id new-state)]
-    (when (= (:action new-state) :kill)
-      (swap! state assoc :action nil)
+  (let [[old new] (swap-vals! state terminating-state task-id termination-status)
+        task (:task new)
+        docker-id (:docker-id new)]
+    (when (and (= (:action new) :kill) (not= (:action old) :kill))
       (log/debug! "terminating step" termination-status)
       (docker/stop! docker docker-id)
       (log/notice! "STEP TERMINATED" termination-status)
@@ -245,35 +243,38 @@
   [milliseconds sisy-state task-id]
   (make-timer milliseconds #(terminate-by-timeout! sisy-state task-id)))
 
-(defn replace-if
-  "Return (assoc m k new-value) if it was old-value, else m."
-  [m k old-value new-value]
-  (if (= (get m k) old-value)
-    (assoc m k new-value)
-    m))
+(defn- running-state
+  "Transition :starting to :running or :terminate-when-ready to termination."
+  [{:keys [status action] :as state-map}]
+  (assoc state-map
+         :status
+         (case status
+           :starting :running
+           :terminate-when-ready action
+           :unexpected-state)
+
+         :action
+         nil))
 
 (defn- run-command!
-  "Run the command inside the ready docker container, with a timeout, and append
-  all the log lines plus an elapsed time measurement. Returns a note to log with
-  completion code (:completed = good), elapsed time, and timeout parameter (to
-  help debug why it timed out)."
+  "Run the command in the ready docker container, with a timeout, and append the
+  log lines. Return a note to log with completion code (:completed = good),
+  elapsed time, and the timeout parameter (to debug timeouts)."
   [{:keys [kafka docker state] :as sisy-state} task lines docker-id]
   (let [timeout-millis (* (:timeout task default-timeout-seconds) 1000)
         timer (task-timeout-timer timeout-millis sisy-state (:id task))
         start-nanos (System/nanoTime)]
     (docker/start! docker docker-id)
 
-    ; status :starting -> :running -> (:completed or :terminated-by-...)
-    ;     or :terminate-when-ready -> :terminated-by-request.
-    (let [old-state-map (first (swap-vals! state assoc :status :running))]
-      (if (= (:status old-state-map) :starting)
+    ; Run it, ending up in state :completed or :terminated-by-...; unless
+    ; already :terminate-when-ready then go straight to :terminated-by-...
+    (let [state-map (swap! state running-state)]
+      (if (= (:status state-map) :running)
         (do
           (doseq [line (docker/logs docker docker-id)]
             (swap! lines conj line)
             (log/info! line))
-          (swap! state replace-if :status :running :completed))
-
-        (swap! state replace-if :status :terminate-when-ready (:action old-state-map)))
+          (swap! state update :status #(if (= % :running) :completed %))))
 
       (let [end-nanos (System/nanoTime)
             _ (cancel-timer timer)
