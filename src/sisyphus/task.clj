@@ -265,15 +265,15 @@
 
     ; status :starting -> :running -> (:completed or :terminated-by-...)
     ;     or :terminate-when-ready -> :terminated-by-request.
-    (let [state-map (swap-vals! state assoc :status :running)]
-      (if (= (:status state-map) :starting)
+    (let [old-state-map (first (swap-vals! state assoc :status :running))]
+      (if (= (:status old-state-map) :starting)
         (do
           (doseq [line (docker/logs docker docker-id)]
             (swap! lines conj line)
             (log/info! line))
           (swap! state replace-if :status :running :completed))
 
-        (swap! state replace-if :status :terminate-when-ready (:action state-map)))
+        (swap! state replace-if :status :terminate-when-ready (:action old-state-map)))
 
       (let [end-nanos (System/nanoTime)
             _ (cancel-timer timer)
