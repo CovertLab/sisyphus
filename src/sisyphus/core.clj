@@ -37,20 +37,19 @@
     (catch Exception e
       (log/exception! e "exception while shutting down"))))
 
-(defn terminate?
-  [message id]
+(defn- terminate?
+  [message]
   (and
-   id
-   (= id (:id message))
+   (:id message)
    (= "terminate" (:event message))))
 
 (defn sisyphus-handle-kafka
   "Handle an incoming request via kafka to terminate a task."
   [state topic message]
-  (let [id (get-in @(:state state) [:task :id])]
+  (let [id (:id message)]
     (try
-      (when (terminate? message id)
-        (task/kill! state "by request"))
+      (when (terminate? message)
+        (task/terminate-by-request! state id))
       (catch Exception e
         (log/exception! e "STEP TERMINATION FAILED" id)))))
 
@@ -59,21 +58,28 @@
   [delay]
   (task/make-timer delay apoptosis))
 
-(defn run-state!
-  [state task]
-  (if-let [time (:timer state)]
-    (task/cancel-timer time))
+(defn- run-state!
+  "Return the state-map for starting to run a task."
+  ; NOTE: The doc for swap! says "f may be called multiple times, and thus
+  ; should be free of side effects." Is an idempotent function OK?
+  [state-map task]
+  (task/cancel-timer (:timer state-map))
   (assoc
-   state
+   state-map
    :task task
-   :status :running))
+   :timer nil
+   :status :starting))
 
-(defn reset-state!
-  [state config]
+(defn- reset-state!
+  "Return the state-map for idling after running a task."
+  ; NOTE: The doc for swap! says "f may be called multiple times, and thus
+  ; should be free of side effects." Is an idempotent function OK?
+  [state-map config]
+  (task/cancel-timer (:timer state-map))
   (assoc
-   state
-   :timer (apoptosis-timer (get-in config [:timer :delay] apoptosis-interval))
+   state-map
    :task {}
+   :timer (apoptosis-timer (get-in config [:timer :delay] apoptosis-interval))
    :status :waiting))
 
 (defn task-tag
@@ -84,17 +90,15 @@
 
 (defn sisyphus-handle-rabbit
   "Handle an incoming request from RabbitMQ to run a task (aka step)."
-  ; TODO(jerry): To clarify/simplify, don't pass task to perform-task! in
-  ; addition to the copy that's in state. Put :docker-id in state rather than in
-  ; (:task state) since it's not part of the task spec and having varying copies
-  ; asks for trouble.
+  ; TODO(jerry): Don't pass task to perform-task! in addition to the copy
+  ; that's in state.
   ;
-  ; TODO(jerry): Document the task message payload
+  ; TODO(jerry): Document the task spec message payload
   ;   {
   ;    ; required:
-  ;    :id "id" :workflow "w" :name "n" :image "d" :command "c"
+  ;    :id "id", :workflow "w", :name "n", :image "d", :command "c",
   ;    ; optional:
-  ;    :inputs [i] :outputs [o] :timeout milliseconds}.
+  ;    :inputs [i], :outputs [o], :timeout seconds}.
   [state raw]
   (let [task (json/parse-string raw true)
         tag (task-tag task)]
@@ -119,10 +123,10 @@
                :rabbit rabbit
                :state
                (atom
-                {:status :waiting
-                 :task {}
+                {:task {}
                  :timer (apoptosis-timer
-                         (get-in config [:timer :initial] wait-interval))})}
+                         (get-in config [:timer :initial] wait-interval))
+                 :status :waiting})}
         producer (kafka/boot-producer (:kafka config))
         state (assoc state :kafka {:producer producer :config (:kafka config)})
         handle (partial sisyphus-handle-kafka state)

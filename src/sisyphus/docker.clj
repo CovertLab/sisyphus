@@ -19,6 +19,7 @@
    [com.spotify.docker.client.exceptions DockerException]
    [com.spotify.docker.client.messages
     ContainerConfig
+    ContainerInfo
     HostConfig]))
 
 (defn connect!
@@ -207,12 +208,20 @@
    (.removeContainer docker id)))
 
 (defn info
-  [^DockerClient docker id]
+  ^ContainerInfo [^DockerClient docker id]
   (.inspectContainer docker id))
 
 (defn exit-code
-  [info]
+  [^ContainerInfo info]
   (.exitCode (.state info)))
+
+(defn error-string
+  [^ContainerInfo info]
+  (.error (.state info)))
+
+(defn oom-killed?
+  [^ContainerInfo info]
+  (.oomKilled (.state info)))
 
 (defn exec-streams
      []

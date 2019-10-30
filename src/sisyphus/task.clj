@@ -189,71 +189,117 @@
     (future (f))))
 
 (defn cancel-timer
-  "Cancel the given timer, if possible."
+  "Cancel a timer if possible. nil safe. Return true if this cancelled it."
   [timer]
-  (future-cancel timer))
+  (and timer (future-cancel timer)))
 
-(defn kill!
-  "Kill the task's docker process and clear the state's docker-id to record that
-  it got killed and to prevent re-kill. (perform-task! will finish up soon.)"
-  ([{:keys [state] :as sisy-state} reason]
-   (kill! sisy-state reason (:docker-id (:task @state))))
-  ([{:keys [docker kafka state]} reason docker-id]
-   (let [task (:task @state)
-         current-docker-id (:docker-id task)]
-     (when (and current-docker-id (= current-docker-id docker-id))
-       (log/debug! "terminating step" reason)
-       (docker/stop! docker docker-id)
-       (swap! state assoc-in [:task :docker-id] nil)  ; prevent double-kill
-       (log/notice! "STEP TERMINATED" reason)
-       (status! kafka task "step-terminated" {:reason reason})))))
+(defn- terminating-state
+  "Return the new state-map for an attempted state transition from :running
+  to/towards a termination status. If the task id matches then status goes
+  :starting -> :terminate-when-ready, or :running -> terminating-status, or no
+  change. In the result, :action indicates the state transition action -- :kill
+  to kill the process now, nil to do nothing, or else the status to set upon
+  killing the process when ready."
+  [state-map task-id termination-status]
+  (cond
+    (not (and task-id (= task-id (:id (:task state-map)))))
+    (assoc state-map :action nil)
 
-(def default-timeout-millis (* 1000 60 60))
+    (= (:status state-map) :running)
+    (assoc state-map :status termination-status :action :kill)
+
+    (= (:status state-map) :starting)
+    (assoc state-map :status :terminate-when-ready :action termination-status)
+
+    :else
+    state-map))
+
+(defn- terminate!
+  "Terminate the task's docker process if it's running and atomically set status
+  to track how it finished and to prevent double-termination.
+  (perform-task! will finish up soon.)"
+  [{:keys [docker kafka state]} task-id termination-status]
+  (let [new-state (swap! state terminating-state task-id termination-status)
+        task (:task new-state)
+        docker-id (:docker-id new-state)]
+    (when (= (:action new-state) :kill)
+      (swap! state assoc :action nil)
+      (log/debug! "terminating step" termination-status)
+      (docker/stop! docker docker-id)
+      (log/notice! "STEP TERMINATED" termination-status)
+      (status! kafka task "step-terminated" {:reason termination-status})
+      true)))
+
+(defn- terminate-by-timeout!
+  [sisy-state task-id]
+  (terminate! sisy-state task-id :terminated-by-timeout))
+
+(defn terminate-by-request!
+  [sisy-state task-id]
+  (terminate! sisy-state task-id :terminated-by-request))
+
+(def default-timeout-seconds (* 60 60))
 
 (defn- task-timeout-timer
   "Start a task-timeout timer for the given docker-id."
-  [milliseconds docker-id sisy-state]
-  (make-timer milliseconds #(kill! sisy-state "task timeout" docker-id)))
+  [milliseconds sisy-state task-id]
+  (make-timer milliseconds #(terminate-by-timeout! sisy-state task-id)))
+
+(defn replace-if
+  "Return (assoc m k new-value) if it was old-value, else m."
+  [m k old-value new-value]
+  (if (= (get m k) old-value)
+    (assoc m k new-value)
+    m))
 
 (defn- run-command!
   "Run the command inside the ready docker container, with a timeout, and append
-  all the log lines plus an elapsed time measurement."
-  [{:keys [kafka docker state] :as sisy-state} lines docker-id]
-  (let [task (:task @state)
-        timeout-millis (:timeout task default-timeout-millis)]
-    (status! kafka task "execution-start" {:docker-id docker-id})
+  all the log lines plus an elapsed time measurement. Returns a note to log with
+  completion code (:completed = good), elapsed time, and timeout parameter (to
+  help debug why it timed out)."
+  [{:keys [kafka docker state] :as sisy-state} task lines docker-id]
+  (let [timeout-millis (* (:timeout task default-timeout-seconds) 1000)
+        timer (task-timeout-timer timeout-millis sisy-state (:id task))
+        start-nanos (System/nanoTime)]
+    (docker/start! docker docker-id)
 
-    (let [timer (task-timeout-timer timeout-millis docker-id sisy-state)
-          start-nanos (System/nanoTime)]
-      (docker/start! docker docker-id)
+    ; status :starting -> :running -> (:completed or :terminated-by-...)
+    ;     or :terminate-when-ready -> :terminated-by-request.
+    (let [state-map (swap-vals! state assoc :status :running)]
+      (if (= (:status state-map) :starting)
+        (do
+          (doseq [line (docker/logs docker docker-id)]
+            (swap! lines conj line)
+            (log/info! line))
+          (swap! state replace-if :status :running :completed))
 
-      (doseq [line (docker/logs docker docker-id)]
-        (swap! lines conj line)
-        (log/info! line)) ; TODO(jerry): Detect stack tracebacks heuristically
-
-      (cancel-timer timer)
+        (swap! state replace-if :status :terminate-when-ready (:action state-map)))
 
       (let [end-nanos (System/nanoTime)
+            _ (cancel-timer timer)
             elapsed-duration (Duration/ofNanos (- end-nanos start-nanos))
-            timeout-duration (Duration/ofMillis timeout-millis)
-            cancelled? (not (get-in @state [:task :docker-id]))
-            note (str "ELAPSED " (format-duration elapsed-duration)
-                      (if cancelled? "; CANCELLED by the " " out of the ")
-                      (format-duration timeout-duration) " timeout")]
-        (swap! lines conj "" note)
-        (log/info! note)))))
+            timeout-duration (Duration/ofMillis timeout-millis)]
+        (str "ELAPSED: " (format-duration elapsed-duration)
+             "; " (full-name (:status @state))  ; completion reason
+             "; timeout parameter: " (format-duration timeout-duration))))))
 
 (defn perform-task!
-  "Given a state containing a connection to both cloud storage and some docker service, 
+  "Given sisy-state containing connections to cloud storage and a docker service,
    execute the task specified by the given `task` map, downloading all inputs from cloud
-   storage, executing the command in the specified container, and then uploading all
-   outputs back to storage.
+   storage, executing the command in the specified container image, then uploading
+   outputs to storage.
 
    Run the container with the host's uid:gid, not as root, so the app has limited
    permissions on the host and its outputs can be deleted.
    ASSUMES: Every directory the app writes to within the container is world-writeable."
+  ;
+  ; TODO(jerry): Always store a log ending with the completion info. Upload the
+  ; the optionally-requested stdout/stderr only if the task completed normally.
   [{:keys [storage kafka docker config state] :as sisy-state} task]
   (try
+    ; Defer any termination requests until there's a docker process to kill.
+    (swap! state assoc :status :starting :docker-id nil :action nil)
+
     (let [root (get-in config [:local :root])
           input-root (str root "/inputs")
           output-root (str root "/outputs")
@@ -276,16 +322,28 @@
                       :command (:command task)}
               lines (atom [])
               id (docker/create! docker config)]
+          (swap! state assoc :docker-id id)
 
           (try
-            (swap! state assoc-in [:task :docker-id] id)
             (log/info! "created container" id config)
             (status! kafka task "container-create" {:docker-id id :docker-config config})
+            (status! kafka task "execution-start" {:docker-id id})
 
-            (run-command! sisy-state lines id)
-
-            (let [code (docker/exit-code (docker/info docker id))]
-              (log/log! (if (zero? code) log/debug log/error) "container exit code" code)
+            (let [note (run-command! sisy-state task lines id)
+                  status (:status @state)
+                  info (docker/info docker id)
+                  code (docker/exit-code info)
+                  error-string (docker/error-string info)
+                  oom-killed? (docker/oom-killed? info)
+                  failed? (or (not= status :completed)
+                              (not= code 0)
+                              (pos? (count error-string))
+                              oom-killed?)]
+              (log/log! (if failed? log/error log/info)
+                        note
+                        "; container exit code:" code
+                        "; error string: " error-string
+                        (if oom-killed? "; got out-of-memory (OOM) error" ""))
               (status! kafka task "container-exit" {:docker-id id :code code})
 
               ; push the outputs to storage if the task succeeded; push stderr even on error
@@ -306,7 +364,7 @@
               (report-task-completion task kafka code lines))
 
             (finally
-              (swap! state assoc-in [:task :docker-id] nil)
+              (swap! state assoc :status :done :docker-id nil :action nil)
               (try
                 (docker/remove! docker id true)
                 (catch DockerException e
