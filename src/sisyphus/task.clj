@@ -222,7 +222,7 @@
         task (:task new)
         docker-id (:docker-id new)]
     (when (and (= (:action new) :kill) (not= (:action old) :kill))
-      (log/debug! "terminating step" termination-status)
+      (log/debug! "terminating step..." termination-status)
       (docker/stop! docker docker-id)
       (log/notice! "STEP TERMINATED" termination-status)
       (status! kafka task "step-terminated" {:reason termination-status})
@@ -280,9 +280,9 @@
             _ (cancel-timer timer)
             elapsed-duration (Duration/ofNanos (- end-nanos start-nanos))
             timeout-duration (Duration/ofMillis timeout-millis)]
-        (str "ELAPSED: " (format-duration elapsed-duration)
-             "; " (full-name (:status @state))  ; completion reason
-             "; timeout parameter: " (format-duration timeout-duration))))))
+        (str "PROCESS " (full-name (:status @state))  ; completion reason
+             ", elapsed " (format-duration elapsed-duration)
+             ", timeout parameter " (format-duration timeout-duration))))))
 
 (defn perform-task!
   "Given sisy-state containing connections to cloud storage and a docker service,
@@ -342,8 +342,8 @@
                                 (not oom-killed?))]
               (log/log! (if success? log/info log/error)
                         (str note
-                             "; container exit code:" code
-                             "; error string: \"" error-string "\""
+                             ", exit code " code
+                             ", error string \"" error-string "\""
                              (if oom-killed? "; got out-of-memory (OOM) error" "")))
               (status! kafka task "container-exit" {:docker-id id :code code})
 
