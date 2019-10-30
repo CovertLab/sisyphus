@@ -261,7 +261,7 @@
   log lines. Return a note to log with completion code (:completed = good),
   elapsed time, and the timeout parameter (to debug timeouts)."
   [{:keys [kafka docker state] :as sisy-state} task lines docker-id]
-  (let [timeout-millis (* (:timeout task default-timeout-seconds) 1000)
+  (let [timeout-millis (* (or (:timeout task) default-timeout-seconds) 1000)
         timer (task-timeout-timer timeout-millis sisy-state (:id task))
         start-nanos (System/nanoTime)]
     (docker/start! docker docker-id)
