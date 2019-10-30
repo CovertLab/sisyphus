@@ -167,8 +167,8 @@
 
 (defn- report-task-completion
   "Report task completion to Gaia and log it."
-  [task kafka code lines]
-  (if (zero? code)
+  [task kafka success? lines]
+  (if success?
     (do
       (log/notice! "STEP COMPLETED" (:workflow task) (:name task) task)
       (status! kafka task "step-complete" {}))
@@ -177,7 +177,7 @@
       (log/notice! "STEP FAILED" (:workflow task) (:name task) log)
       (status!
        kafka task "step-error"
-       {:code code
+       {:success success?
         :log log}))))
 
 (defn make-timer
@@ -335,11 +335,11 @@
                   code (docker/exit-code info)
                   error-string (docker/error-string info)
                   oom-killed? (docker/oom-killed? info)
-                  failed? (or (not= status :completed)
-                              (not= code 0)
-                              (pos? (count error-string))
-                              oom-killed?)]
-              (log/log! (if failed? log/error log/info)
+                  success? (and (= status :completed)
+                                (zero? code)
+                                (zero? (count error-string))  ; is this right?
+                                (not oom-killed?))]
+              (log/log! (if success? log/info log/error)
                         note
                         "; container exit code:" code
                         "; error string: " error-string
@@ -347,12 +347,14 @@
               (status! kafka task "container-exit" {:docker-id id :code code})
 
               ; push the outputs to storage if the task succeeded; push stderr even on error
+              ; TODO(jerry): Unconditionally push stdout+stderr + `note` to a log dir.
+              ;   Conditionally push requested outputs and send "data-complete".
               (doseq [output outputs]
                 (if (:stdout? output)
                   (let [stdout (string/join "\n" @lines)]
                     (spit (:local output) stdout)))
 
-                (when (or (zero? code) (:stdout? output))
+                (when (or success? (:stdout? output))
                   (push-output! storage output)
 
                   (status!
@@ -361,7 +363,7 @@
                     :path (:key output)
                     :key (str (:bucket output) ":" (:key output))})))
 
-              (report-task-completion task kafka code lines))
+              (report-task-completion task kafka success? lines))
 
             (finally
               (swap! state assoc :status :done :docker-id nil :action nil)
