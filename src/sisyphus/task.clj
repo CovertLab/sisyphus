@@ -337,13 +337,13 @@
                   oom-killed? (docker/oom-killed? info)
                   success? (and (= status :completed)
                                 (zero? code)
-                                (zero? (count error-string))  ; is this right?
+                                ; (zero? (count error-string))  ; is this right?
                                 (not oom-killed?))]
               (log/log! (if success? log/info log/error)
-                        note
-                        "; container exit code:" code
-                        "; error string: " error-string
-                        (if oom-killed? "; got out-of-memory (OOM) error" ""))
+                        (str note
+                             "; container exit code:" code
+                             "; error string: \"" error-string "\""
+                             (if oom-killed? "; got out-of-memory (OOM) error" "")))
               (status! kafka task "container-exit" {:docker-id id :code code})
 
               ; push the outputs to storage if the task succeeded; push stderr even on error
