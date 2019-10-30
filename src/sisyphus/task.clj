@@ -343,6 +343,7 @@
               (log/log! (if success? log/info log/error)
                         (str note
                              ", exit code " code
+                             (if (= code 137) " SIGKILL" "")
                              ", error string \"" error-string "\""
                              (if oom-killed? "; got out-of-memory (OOM) error" "")))
               (status! kafka task "container-exit" {:docker-id id :code code})
