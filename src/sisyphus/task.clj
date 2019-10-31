@@ -174,15 +174,15 @@
       (status! kafka task "step-complete" {}))
 
     (let [log (take-last 100 @lines)]
-      (log/notice! "STEP FAILED" (:workflow task) (:name task) log)
+      (log/error! "STEP FAILED" (:workflow task) (:name task) log)
       (status!
        kafka task "step-error"
-       {:success success?
-        :log log}))))
+       {:log log}))))
 
 (defn make-timer
-  "Make a `future` as a timer that calls `f` in another thread. Cancelling it
-  can stop the timer but won't interrupt `f` midway."
+  "Make a `future` as a timer that waits then calls `f`. Cancelling it can stop
+  the timer but won't interrupt `f` midway (which could be bad for docker/stop!
+  or apoptosis) since it runs `f` in an independent thread."
   [milliseconds f]
   (future
     (Thread/sleep milliseconds)
@@ -192,6 +192,30 @@
   "Cancel a timer if possible. nil safe. Return true if this cancelled it."
   [timer]
   (and timer (future-cancel timer)))
+
+
+; [FSM] The task :status normally goes through:
+;   :starting   # pulling the docker image & input files and starting a container
+;   :running    # running the task's command process in the container
+;   :completed  # finished the command; pushing the output files if successful
+;   :done
+;
+; on a "terminate" request from Gaia while starting:
+;   :starting
+;   :terminate-when-ready  # ready to terminate it after starting the container
+;   :terminated-by-request
+;   :done
+;
+; on a "terminate" request while running:
+;   :running
+;   :terminated-by-request
+;   :done
+;
+; on a timeout while running:
+;   :running
+;   :terminated-by-timeout
+;   :done
+
 
 (defn- terminating-state
   "Return the new state-map for an attempted state transition from :running
@@ -251,7 +275,7 @@
          (case status
            :starting :running
            :terminate-when-ready action
-           :unexpected-state)
+           :unexpected-state)  ; throw an exception?
 
          :action
          nil))
@@ -293,9 +317,6 @@
    Run the container with the host's uid:gid, not as root, so the app has limited
    permissions on the host and its outputs can be deleted.
    ASSUMES: Every directory the app writes to within the container is world-writeable."
-  ;
-  ; TODO(jerry): Always store a log ending with the completion info. Upload the
-  ; the optionally-requested stdout/stderr only if the task completed normally.
   [{:keys [storage kafka docker config state] :as sisy-state} task]
   (try
     ; Defer any termination requests until there's a docker process to kill.
@@ -338,19 +359,19 @@
                   oom-killed? (docker/oom-killed? info)
                   success? (and (= status :completed)
                                 (zero? code)
-                                ; (zero? (count error-string))  ; is this right?
-                                (not oom-killed?))]
-              (log/log! (if success? log/info log/error)
-                        (str note
-                             ", exit code " code
-                             (if (= code 137) " (SIGKILL)" "")
-                             ", error string \"" error-string "\""
-                             (if oom-killed? "; got out-of-memory (OOM) error" "")))
+                                ; (zero? (count error-string))  ; use this?
+                                (not oom-killed?))
+                  message (str note
+                               ", exit code " code
+                               (if (= code 137) " (SIGKILL)" "")
+                               ", error string \"" error-string "\""
+                               (if oom-killed? "; got out-of-memory (OOM) error" ""))]
+              (log/log! (if success? log/info log/error) message)
               (status! kafka task "container-exit" {:docker-id id :code code})
 
               ; push the outputs to storage if the task succeeded; push stderr even on error
-              ; TODO(jerry): Unconditionally push stdout+stderr + `note` to a log dir.
-              ;   Conditionally push requested outputs and send "data-complete".
+              ; TODO(jerry): Unconditionally push stdout+stderr+message to a log dir.
+              ;   Conditionally push stdout+stderr like other requested outputs.
               (doseq [output outputs]
                 (if (:stdout? output)
                   (let [stdout (string/join "\n" @lines)]
