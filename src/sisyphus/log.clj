@@ -83,7 +83,6 @@
 
 (defn- log-entry!
   "Log an entry. Flush it at `notice` severity and higher."
-  ; TODO(jerry): Log a sequence of entries at once from Docker output lines.
   [^Severity severity ^Payload payload]
   (let [{:keys [name resource]} *logger*
         entry

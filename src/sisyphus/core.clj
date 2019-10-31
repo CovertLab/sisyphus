@@ -37,53 +37,49 @@
     (catch Exception e
       (log/exception! e "exception while shutting down"))))
 
-(defn timer
-  [wait f]
-  (future
-    (Thread/sleep wait)
-    (f)))
-
-(defn terminate?
-  [message id]
+(defn- terminate?
+  [message]
   (and
-   id
-   (= id (:id message))
+   (:id message)
    (= "terminate" (:event message))))
 
 (defn sisyphus-handle-kafka
-  "Handle an incoming kafka message that might ask to terminate the task."
+  "Handle an incoming request via kafka to terminate a task."
   [state topic message]
-  (let [task (:task @(:state state))
-        {:keys [id docker-id]} task]
+  (let [id (:id message)]
     (try
-      (when (terminate? message id)
-        (log/debug! "terminating step by request" id)
-        (docker/stop! (:docker state) docker-id)
-        (log/notice! "STEP TERMINATED BY REQUEST")
-        (task/status! (:kafka state) task "step-terminated" message)
-        (swap! (:state state) assoc :status :waiting :task {}))
+      (when (terminate? message)
+        (task/terminate-by-request! state id))
       (catch Exception e
         (log/exception! e "STEP TERMINATION FAILED" id)))))
 
 (defn apoptosis-timer
+  "Start a timer to self-destruct this server if it remains idle."
   [delay]
-  (timer delay apoptosis))
+  (task/make-timer delay apoptosis))
 
-(defn run-state!
-  [state task]
-  (if-let [time (:timer state)]
-    (future-cancel time))
+(defn- run-state!
+  "Return the state-map for starting to run a task."
+  ; NOTE: The doc for swap! says "f may be called multiple times, and thus
+  ; should be free of side effects." Is an idempotent function OK?
+  [state-map task]
+  (task/cancel-timer (:timer state-map))
   (assoc
-   state
+   state-map
    :task task
-   :status :running))
+   :timer nil
+   :status :starting))
 
-(defn reset-state!
-  [state config]
+(defn- reset-state!
+  "Return the state-map for idling after running a task."
+  ; NOTE: The doc for swap! says "f may be called multiple times, and thus
+  ; should be free of side effects." Is an idempotent function OK?
+  [state-map config]
+  (task/cancel-timer (:timer state-map))
   (assoc
-   state
-   :timer (apoptosis-timer (get-in config [:timer :delay] apoptosis-interval))
+   state-map
    :task {}
+   :timer (apoptosis-timer (get-in config [:timer :delay] apoptosis-interval))
    :status :waiting))
 
 (defn task-tag
@@ -93,7 +89,16 @@
     (str log/gce-instance-name "." workflow-name "." task-name)))
 
 (defn sisyphus-handle-rabbit
-  "Handle an incoming task message by running the requested step."
+  "Handle an incoming request from RabbitMQ to run a task (aka step)."
+  ; TODO(jerry): Don't pass task to perform-task! in addition to the copy
+  ; that's in state.
+  ;
+  ; TODO(jerry): Document the task spec message payload
+  ;   {
+  ;    ; required:
+  ;    :id "id", :workflow "w", :name "n", :image "d", :command "c",
+  ;    ; optional:
+  ;    :inputs [i], :outputs [o], :timeout seconds}.
   [state raw]
   (let [task (json/parse-string raw true)
         tag (task-tag task)]
@@ -110,16 +115,18 @@
   (let [docker (docker/connect! (:docker config))
         storage (cloud/connect-storage! (:storage config))
         rabbit (rabbit/connect! (:rabbit config))
+        ; TODO: A state map containing a state map is too confusing. The key
+        ; names are the only thing we have for navigating the data.
         state {:config config
                :docker docker
                :storage storage
                :rabbit rabbit
                :state
                (atom
-                {:status :waiting
-                 :task {}
+                {:task {}
                  :timer (apoptosis-timer
-                         (get-in config [:timer :initial] wait-interval))})}
+                         (get-in config [:timer :initial] wait-interval))
+                 :status :waiting})}
         producer (kafka/boot-producer (:kafka config))
         state (assoc state :kafka {:producer producer :config (:kafka config)})
         handle (partial sisyphus-handle-kafka state)

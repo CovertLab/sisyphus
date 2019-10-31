@@ -23,6 +23,7 @@
      * :exchange - name of the exchange to connect to (defaults to global exchange 'sisyphus-exchange')
      * :routing-key - routing key to use for messages (defaults to 'sisyphus-task')
    Returns a map containing all of the rabbitmq connection information."
+  ; TODO: try/finally to always close the channel and connection?
   [config]
   (let [config (merge default-config config)
         connection (lcore/connect (select-keys config config-keys))
