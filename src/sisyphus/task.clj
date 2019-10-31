@@ -248,7 +248,7 @@
     (when (and (= (:action new) :kill) (not= (:action old) :kill))
       (log/debug! "terminating step..." termination-status)
       (docker/stop! docker docker-id)
-      (log/notice! "STEP TERMINATED" termination-status)
+      (log/notice! "step terminated" termination-status)
       (status! kafka task "step-terminated" {:reason termination-status})
       true)))
 
@@ -304,7 +304,7 @@
             _ (cancel-timer timer)
             elapsed-duration (Duration/ofNanos (- end-nanos start-nanos))
             timeout-duration (Duration/ofMillis timeout-millis)]
-        (str "PROCESS " (full-name (:status @state))  ; completion reason
+        (str "process " (full-name (:status @state))  ; completion reason
              ", elapsed " (format-duration elapsed-duration)
              ", timeout parameter " (format-duration timeout-duration))))))
 
