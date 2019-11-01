@@ -209,7 +209,7 @@
 ; [FSM] The task :status normally goes through:
 ;   :starting   # pulling the docker image & input files and starting a container
 ;   :running    # running the task's command process in the container
-;   :completed  # finished the command; pushing the output files if successful
+;   :finished   # finished the process; now pushing its output files if successful
 ;   :done
 ;
 ; on a "terminate" request from Gaia while starting:
@@ -294,7 +294,7 @@
 
 (defn- run-command!
   "Run the command in the ready docker container, with a timeout, and append the
-  log lines. Return a note to log with completion code (:completed = good),
+  log lines. Return a note to log with completion code,
   elapsed time, and the timeout parameter (to debug timeouts)."
   [{:keys [kafka docker state] :as sisy-state} task lines docker-id]
   (let [timeout-millis (* (or (:timeout task) default-timeout-seconds) 1000)
@@ -302,7 +302,7 @@
         start-nanos (System/nanoTime)]
     (docker/start! docker docker-id)
 
-    ; Run it, ending up in state :completed or :terminated-by-...; unless
+    ; Run it, ending up in state :finished or :terminated-by-...; unless
     ; already :terminate-when-ready then go straight to :terminated-by-...
     (let [state-map (swap! state running-state)]
       (if (= (:status state-map) :running)
@@ -310,7 +310,7 @@
           (doseq [line (docker/logs docker docker-id)]
             (swap! lines conj line)
             (log/info! line))
-          (swap! state update :status #(if (= % :running) :completed %))))
+          (swap! state update :status #(if (= % :running) :finished %))))
 
       (let [end-nanos (System/nanoTime)
             _ (cancel-timer timer)
@@ -369,7 +369,7 @@
                   code (docker/exit-code info)
                   error-string (docker/error-string info)
                   oom-killed? (docker/oom-killed? info)
-                  success? (and (= status :completed)
+                  success? (and (= status :finished)
                                 (zero? code)
                                 ; (zero? (count error-string))  ; use this?
                                 (not oom-killed?))
