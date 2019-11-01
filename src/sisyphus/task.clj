@@ -182,7 +182,7 @@
   [task kafka success? lines]
   (if success?
     (do
-      (log/notice! "STEP COMPLETED" (:workflow task) (:name task) task)
+      (log/notice! "STEP COMPLETE" (:workflow task) (:name task) task)
       (status! kafka task "step-complete" {}))
 
     (let [log (take-last 100 @lines)]
@@ -316,9 +316,9 @@
             _ (cancel-timer timer)
             elapsed-duration (Duration/ofNanos (- end-nanos start-nanos))
             timeout-duration (Duration/ofMillis timeout-millis)]
-        (str "Process " (full-name (:status @state))  ; completion reason
-             ", elapsed " (format-duration elapsed-duration)
-             ", timeout parameter " (format-duration timeout-duration))))))
+        [elapsed-duration timeout-duration]))))
+
+(def h-rule (string/join (repeat 80 "-")))
 
 (defn perform-task!
   "Given sisy-state containing connections to cloud storage and a docker service,
@@ -363,7 +363,8 @@
             (status! kafka task "container-create" {:docker-id id :docker-config config})
             (status! kafka task "execution-start" {:docker-id id})
 
-            (let [note (run-command! sisy-state task lines id)
+            (let [[elapsed-duration timeout-duration]
+                  (run-command! sisy-state task lines id)
                   status (:status @state)
                   info (docker/info docker id)
                   code (docker/exit-code info)
@@ -374,11 +375,12 @@
                                 ; (zero? (count error-string))  ; use this?
                                 (not oom-killed?))
                   message (str (if success? "Success: " "Failure: ")
-                               note
-                               ", exit code " code
-                               (if (= code 137) " (SIGKILL)" "")
-                               ", error string \"" error-string "\""
-                               (if oom-killed? "; got out-of-memory (OOM) error" ""))]
+                               "Process " status  ; completion type
+                               ", exit code " code (if (= code 137) " (SIGKILL)" "")
+                               ", error string “" error-string "”"
+                               (if oom-killed? " out-of-memory error" "")
+                               ", elapsed " (format-duration elapsed-duration)
+                               " of timeout parameter " (format-duration timeout-duration))]
               (log/log! (if success? log/info log/error) message)
               (status! kafka task "container-exit" {:docker-id id :code code})
 
@@ -386,9 +388,9 @@
               (doseq [output outputs]
                 (when (or success? (:log-out? output))
                   (when (:stdout? output)
-                    (let [prolog (if (:log-out? output) [task ""] [])
-                          epilogue (if (:log-out? output) ["" message] [])
-                          all-lines (concat prolog @lines epilogue)]
+                    (let [prologue (if (:log-out? output) [task "" h-rule] [])
+                          epilogue (if (:log-out? output) [h-rule "" message] [])
+                          all-lines (concat prologue @lines epilogue)]
                       (write-lines! (:local output) all-lines)))
 
                   (push-output! storage output)
