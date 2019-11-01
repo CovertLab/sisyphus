@@ -31,7 +31,8 @@
     [(.substring full-key 0 colon) (.substring full-key (inc colon))]))
 
 (def stdout-tokens
-  #{">" "STDOUT"})
+  #{">" "STDOUT"    ; special internal path to capture stdout/stderr
+    ">>"})          ; ditto plus log info, written even if the task fails
 
 (defn delete-local-trees!
   "Delete the local file trees given their path strings. Log errors but proceed."
@@ -42,6 +43,15 @@
      (catch java.io.IOException e
        (log/exception! e "couldn't delete local" path)))))
 
+(defn write-lines!
+  "Write a sequence of lines to a file, adding a newline to each line. Like
+  `spit`, this opens f via io/writer, writes the lines, then closes f.
+  See clojure.java.io/writer for the possibilities for f. Options docs?"
+  [f lines & options]
+  (with-open [^java.io.Writer w (apply io/writer f options)]
+    (doseq [line lines]
+      (.write w ^String (str line "\n")))))
+
 (defn find-local!
   "Make the named input or output file or directory so mounting it in
   Docker will work right, e.g. it won't assume it's going to be a directory."
@@ -51,6 +61,7 @@
         local (.getAbsolutePath input)
         archive (str local ".tar.gz")
         stdout? (stdout-tokens internal)
+        log-out? (= internal ">>")
         directory? (cloud/is-directory-path? internal)
         intern (cloud/trim-slash internal)]
     (if directory?
@@ -63,6 +74,7 @@
      :archive archive
      :local local
      :stdout? stdout?
+     :log-out? log-out?
      :directory? directory?
      :internal intern}))
 
@@ -304,7 +316,7 @@
             _ (cancel-timer timer)
             elapsed-duration (Duration/ofNanos (- end-nanos start-nanos))
             timeout-duration (Duration/ofMillis timeout-millis)]
-        (str "process " (full-name (:status @state))  ; completion reason
+        (str "Process " (full-name (:status @state))  ; completion reason
              ", elapsed " (format-duration elapsed-duration)
              ", timeout parameter " (format-duration timeout-duration))))))
 
@@ -361,7 +373,8 @@
                                 (zero? code)
                                 ; (zero? (count error-string))  ; use this?
                                 (not oom-killed?))
-                  message (str note
+                  message (str (if success? "Success: " "Failure: ")
+                               note
                                ", exit code " code
                                (if (= code 137) " (SIGKILL)" "")
                                ", error string \"" error-string "\""
@@ -369,15 +382,15 @@
               (log/log! (if success? log/info log/error) message)
               (status! kafka task "container-exit" {:docker-id id :code code})
 
-              ; push the outputs to storage if the task succeeded; push stderr even on error
-              ; TODO(jerry): Unconditionally push stdout+stderr+message to a log dir.
-              ;   Conditionally push stdout+stderr like other requested outputs.
+              ; Push outputs to storage on success; push the log always.
               (doseq [output outputs]
-                (if (:stdout? output)
-                  (let [stdout (string/join "\n" @lines)]
-                    (spit (:local output) stdout)))
+                (when (or success? (:log-out? output))
+                  (when (:stdout? output)
+                    (let [prolog (if (:log-out? output) [task ""] [])
+                          epilogue (if (:log-out? output) ["" message] [])
+                          all-lines (concat prolog @lines epilogue)]
+                      (write-lines! (:local output) all-lines)))
 
-                (when (or success? (:stdout? output))
                   (push-output! storage output)
 
                   (status!
