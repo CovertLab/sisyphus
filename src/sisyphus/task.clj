@@ -258,7 +258,7 @@
         task (:task new)
         docker-id (:docker-id new)]
     (when (and (= (:action new) :kill) (not= (:action old) :kill))
-      (log/debug! "terminating step..." termination-status)
+      (log/info! "terminating step..." termination-status)
       (docker/stop! docker docker-id)
       (log/notice! "step terminated" termination-status)
       (status! kafka task "step-terminated" {:reason termination-status})
@@ -375,7 +375,7 @@
                                 ; (zero? (count error-string))  ; use this?
                                 (not oom-killed?))
                   message (str (if success? "Success: " "Failure: ")
-                               "Process " status  ; completion type
+                               "Process " (full-name status)  ; completion type
                                ", exit code " code (if (= code 137) " (SIGKILL)" "")
                                ", error string “" error-string "”"
                                (if oom-killed? " out-of-memory error" "")
