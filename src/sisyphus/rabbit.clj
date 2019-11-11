@@ -131,6 +131,9 @@
     :default "sisyphus-exchange"]])
 
 (defn -main
+  "This main is for testing rabbit consumers. You can provide queue, exchange and routing
+  options from `parse-options` at the command line and this will emit any messages it receives
+  from that queue to console."
   [& args]
   (try
     (log/debug! "rabbbbbbbbbbit")
