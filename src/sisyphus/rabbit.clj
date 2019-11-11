@@ -19,11 +19,18 @@
    :exchange "sisyphus-exchange"})
 
 (defn connect-rabbit!
+  "Make a connection to rabbitmq using a map containing keys from `connection-keys`:
+     * :host - Host of the rabbitmq server
+     * :port - Port number for the server
+     * :username - User account registered with rabbitmq
+     * :vhost - Vhost is the first segment in the rabbit connection
+     * :password - Password for account"
   [config]
   (lcore/connect (select-keys config connection-keys)))
 
 (defn connect-queue!
   [connection config]
+  "Create a new channel on the given connection."
   (let [config (merge default-config config)
         channel (lchannel/open connection)
         _ (lbasic/qos channel 1)
