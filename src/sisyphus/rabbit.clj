@@ -1,5 +1,6 @@
 (ns sisyphus.rabbit
   (:require
+   [clojure.tools.cli :as cli]
    [cheshire.core :as json]
    [langohr.core :as lcore]
    [langohr.channel :as lchannel]
@@ -9,7 +10,7 @@
    [langohr.basic :as lbasic]
    [sisyphus.log :as log]))
 
-(def config-keys
+(def connection-keys
   [:host :port :username :vhost :password])
 
 (def default-config
@@ -17,16 +18,20 @@
    :queue "sisyphus-queue"
    :exchange "sisyphus-exchange"})
 
-(defn connect!
-  "Connect to the rabbitmq service. Accepts a `config` map containing several possible options:
-     * :queue - name of the rabbit queue to connect to (default 'sisyphus-queue')
-     * :exchange - name of the exchange to connect to (defaults to global exchange 'sisyphus-exchange')
-     * :routing-key - routing key to use for messages (defaults to 'sisyphus-task')
-   Returns a map containing all of the rabbitmq connection information."
-  ; TODO: try/finally to always close the channel and connection?
+(defn connect-rabbit!
+  "Make a connection to rabbitmq using a map containing keys from `connection-keys`:
+     * :host - Host of the rabbitmq server
+     * :port - Port number for the server
+     * :username - User account registered with rabbitmq
+     * :vhost - Vhost is the first segment in the rabbit connection
+     * :password - Password for account"
   [config]
+  (lcore/connect (select-keys config connection-keys)))
+
+(defn connect-queue!
+  [connection config]
+  "Create a new channel on the given connection."
   (let [config (merge default-config config)
-        connection (lcore/connect (select-keys config config-keys))
         channel (lchannel/open connection)
         _ (lbasic/qos channel 1)
         queue-name (:queue config)
@@ -50,6 +55,16 @@
      :connection connection
      :channel channel
      :config config}))
+
+(defn connect!
+  "Connect to the rabbitmq service. Accepts a `config` map containing several possible options:
+     * :queue - name of the rabbit queue to connect to (default 'sisyphus-queue')
+     * :exchange - name of the exchange to connect to (defaults to global exchange 'sisyphus-exchange')
+     * :routing-key - routing key to use for messages (defaults to 'sisyphus-task')
+   Returns a map containing all of the rabbitmq connection information."
+  [config]
+  (let [connection (connect-rabbit! config)]
+    (connect-queue! connection config)))
 
 (defn handle-message-wrapper
   "Given a function that takes a message, return a rabbit handler.
@@ -93,7 +108,7 @@
    (:routing-key rabbit)
    (json/generate-string message)
    {:content-type "text/plain"
-    :peristent true}))
+    :persistent true}))
 
 (defn close!
   "Close the connection represented by the given rabbitmq connection map."
@@ -107,11 +122,23 @@
   (let [message (json/parse-string raw true)]
     (log/info! "rabbit message received:" message)))
 
+(def parse-options
+  [["-q" "--queue QUEUE" "queue to subscribe to"
+    :default "sisyphus-queue"]
+   ["-r" "--routing-key ROUTING_KEY" "routing key for messages"
+    :default "sisyphus-task"]
+   ["-e" "--exchange EXCHANGE" "message exchange"
+    :default "sisyphus-exchange"]])
+
 (defn -main
+  "This main is for testing rabbit consumers. You can provide queue, exchange and routing
+  options from `parse-options` at the command line and this will emit any messages it receives
+  from that queue to console."
   [& args]
   (try
     (log/debug! "rabbbbbbbbbbit")
-    (let [rabbit (connect! {})
+    (let [options (:options (cli/parse-opts args parse-options))
+          rabbit (connect! options)
           maw (atom [])
           consumer (start-consumer!
                     rabbit

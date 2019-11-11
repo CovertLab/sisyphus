@@ -1,9 +1,10 @@
-(defproject sisyphus "0.0.18"
+(defproject sisyphus "0.0.19"
   :description "Eternally execute tasks"
   :url "http://github.com/CovertLab/sisyphus"
   :license {:name "MIT License"
             :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.10.0"]
+                 [org.clojure/tools.cli "0.4.2"]
                  [lispyclouds/clj-docker-client "0.2.3"]
                  [com.google.cloud/google-cloud-core "1.87.0"]
                  [com.google.cloud/google-cloud-logging "1.87.0"] ; do not exclude io.grpc/grpc-core io.grpc/grpc-api io.grpc/grpc-netty-shaded or else logging will fail to load classes
