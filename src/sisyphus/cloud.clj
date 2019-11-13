@@ -290,7 +290,7 @@
                      credential)
         builder (Compute$Builder. transport factory credential)]
     (.setApplicationName builder "Gaia/0.0.1")
-    (.build builder)))
+    ^Compute (.build builder)))
 
 (defn render-filter
   "Render a map of options into the weird format that the compute instances api expects"
@@ -302,9 +302,7 @@
       (format
        "(%s = %s)"
        (name k)
-       (if (string? v)
-         (format "\"%s\"" v)
-         v)))
+       (with-out-str (pr v))))
     instance-filter)))
 
 (defn list-instances
