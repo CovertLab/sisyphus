@@ -5,6 +5,14 @@
    [sisyphus.log :as log])
   (:import
    [java.io File FileInputStream]
+   [java.util Arrays]
+   [com.google.api.client.googleapis.auth.oauth2 GoogleCredential]
+   [com.google.api.client.googleapis.javanet GoogleNetHttpTransport]
+   [com.google.api.client.http HttpTransport]
+   [com.google.api.client.json JsonFactory]
+   [com.google.api.client.json.jackson2 JacksonFactory]
+   [com.google.api.services.compute Compute Compute$Builder]
+   [com.google.api.services.compute.model Instance InstanceList]
    [com.google.cloud.storage
     Storage StorageOptions StorageException
     Storage$BlobField
@@ -269,3 +277,50 @@
             relative-path (.substring remote-key prefix-length)
             local-path (join-path [path relative-path])]
         (download-blob! blob local-path)))))
+
+(defn create-compute-service
+  "Create an instance of com.google.api.services.compute.Compute to make requests with."
+  []
+  (let [transport (GoogleNetHttpTransport/newTrustedTransport)
+        factory (JacksonFactory/getDefaultInstance)
+        auth (into-array ["https://www.googleapis.com/auth/cloud-platform"])
+        credential (GoogleCredential/getApplicationDefault)
+        credential (if (.createScopedRequired credential)
+                     (.createScoped credential (Arrays/asList auth))
+                     credential)
+        builder (Compute$Builder. transport factory credential)]
+    (.setApplicationName builder "Gaia/0.0.1")
+    ^Compute (.build builder)))
+
+(defn render-filter
+  "Render a map of options into the weird format that the compute instances api expects"
+  [instance-filter]
+  (string/join
+   " "
+   (map
+    (fn [[k v]]
+      (format
+       "(%s = %s)"
+       (name k)
+       (with-out-str (pr v))))
+    instance-filter)))
+
+(defn list-instances
+  "Given a compute service instance, project and zone for instances, return information on those
+  instances. Also accepts an optional `options` arg that could contain the following keys:
+      * :filter - a map of keys to values to filter the list of instances."
+  ([^Compute service project zone]
+   (list-instances service project zone {}))
+  ([^Compute service project zone options]
+   (let [request (.list (.instances service) project zone)]
+     (if-let [instance-filter (:filter options)]
+       (.setFilter request (render-filter instance-filter)))
+     (loop [response (.execute request)
+            instances []]
+       (let [items (.getItems response)
+             next (.getNextPageToken response)
+             expansion (concat instances items)]
+         (.setPageToken request next)
+         (if (and items next)
+           (recur (.execute request) expansion)
+           expansion))))))
