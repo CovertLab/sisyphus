@@ -122,6 +122,14 @@
   (let [message (json/parse-string raw true)]
     (log/info! "rabbit message received:" message)))
 
+(defn rabbit-metadata
+  ([] (rabbit-metadata {}))
+  ([default]
+   (let [default (merge default-config default)]
+     {:exchange (log/gce-metadata "rabbit-exchange" (:exchange default))
+      :queue (log/gce-metadata "rabbit-queue" (:queue default))
+      :routing-key (log/gce-metadata "rabbit-routing-key" (:routing-key default))})))
+
 (def parse-options
   [["-q" "--queue QUEUE" "queue to subscribe to"
     :default "sisyphus-queue"]
