@@ -123,12 +123,11 @@
     (log/info! "rabbit message received:" message)))
 
 (defn rabbit-metadata
-  ([] (rabbit-metadata {}))
-  ([default]
-   (let [default (merge default-config default)]
-     {:exchange (log/gce-metadata "rabbit-exchange" (:exchange default))
-      :queue (log/gce-metadata "rabbit-queue" (:queue default))
-      :routing-key (log/gce-metadata "rabbit-routing-key" (:routing-key default))})))
+  []
+  (when-let [workflow (log/gce-metadata "name")]
+    {:exchange (str workflow "-exchange")
+     :queue (str workflow "-queue")
+     :routing-key (str workflow "-task")}))
 
 (def parse-options
   [["-q" "--queue QUEUE" "queue to subscribe to"

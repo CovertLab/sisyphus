@@ -143,7 +143,12 @@
      4. defaults from ns rabbit/default-config"
   [config]
   (let [metadata (rabbit/rabbit-metadata)
-        rabbit-config (merge (:rabbit config) metadata (:options config))
+        rabbit-config
+        (merge
+         rabbit/default-config
+         (:rabbit config)
+         metadata
+         (:options config))
         config (assoc config :rabbit rabbit-config)
         state (connect! config)]
     (rabbit/start-consumer!

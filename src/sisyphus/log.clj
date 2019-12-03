@@ -1,6 +1,7 @@
 (ns sisyphus.log
   (:require
     [clojure.string :as string]
+    [clojure.java.shell :as shell]
     [clj-http.client :as http])
   (:import
     [java.io PrintWriter StringWriter]
@@ -11,22 +12,32 @@
 
 (def log-truncation 50000)
 
+(defn hostname
+  []
+  (.getHostName (java.net.InetAddress/getLocalHost)))
+
+(defn shell-out
+  [& tokens]
+  "Shell out for a single line of text."
+  (.trim (:out (apply shell/sh tokens))))
+
 (defn gce-metadata
   "Retrieve a GCE instance metadata field."
-  [fieldname default]
+  [fieldname]
   (try
     (:body
       (http/get
        (str "http://metadata.google.internal/computeMetadata/v1/instance/" fieldname)
        {:headers
         {:metadata-flavor "Google"}}))
-    (catch Exception e default)))
+    (catch Exception e
+      (println "not on gce or" fieldname "is not a metadata field"))))
 
 (def gce-instance-name
-  (gce-metadata "name" "local"))
+  (or (gce-metadata "name") "local"))
 
 (def gce-zone
-  (last (string/split (gce-metadata "zone" "not-on-GCE") #"/")))
+  (last (string/split (or (gce-metadata "zone") "not-on-GCE") #"/")))
 
 (def enable-gloud-logging?
   (not= gce-zone "not-on-GCE"))

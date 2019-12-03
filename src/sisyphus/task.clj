@@ -2,7 +2,6 @@
   (:require
    [clojure.string :as string]
    [clojure.java.io :as io]
-   [clojure.java.shell :as shell]
    [cheshire.core :as json]
    [sisyphus.archive :as archive]
    [sisyphus.cloud :as cloud]
@@ -164,18 +163,13 @@
    kafka task status
    (assoc message :exception (.toString throwable)) :status-topic))
 
-(defn shell-out
-  [& tokens]
-  "Shell out for a single line of text."
-  (.trim (:out (apply shell/sh tokens))))
-
 (def uid-gid
   "The current process' uid:gid numbers. Pass this to Docker --user so the
   command will create files with the same ownership and also not run as root
   with too much host access. The only user and group info shared in/out of the
   container are these id numbers. This user and group don't even need to be
   created in the container."
-  (str (shell-out "id" "-u") ":" (shell-out "id" "-g")))
+  (str (log/shell-out "id" "-u") ":" (log/shell-out "id" "-g")))
 
 (defn- report-task-completion
   "Report task completion to Gaia and log it."
