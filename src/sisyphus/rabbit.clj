@@ -124,7 +124,7 @@
 
 (defn rabbit-metadata
   []
-  (when-let [workflow (log/gce-metadata "name")]
+  (let [workflow (or (log/gce-metadata "attributes/workflow") "sisyphus")]
     {:exchange (str workflow "-exchange")
      :queue (str workflow "-queue")
      :routing-key (str workflow "-task")}))
