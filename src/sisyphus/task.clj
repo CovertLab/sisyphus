@@ -4,30 +4,14 @@
    [clojure.java.io :as io]
    [cheshire.core :as json]
    [sisyphus.archive :as archive]
+   [sisyphus.base :as base]
    [sisyphus.cloud :as cloud]
    [sisyphus.docker :as docker]
    [sisyphus.kafka :as kafka]
    [sisyphus.log :as log])
   (:import
-    [java.time Duration]
-    [com.spotify.docker.client.exceptions DockerException]))
-
-(defn format-duration
-  "Format a java.time.Duration as a string like '1H26M12.345S'."
-  [^Duration duration]
-  (.substring (str duration) 2)) ; strip "PT" from the "PTnHnMnS" format
-
-(def full-name
-  "Extract the string representation of the given keyword. This is an extension to the
-   built-in `name` function which fails to return the full string representation for
-   namespaced keywords."
-  (comp str symbol))
-
-(defn split-key
-  [key]
-  (let [full-key (full-name key)
-        colon (.indexOf full-key ":")]
-    [(.substring full-key 0 colon) (.substring full-key (inc colon))]))
+   [java.time Duration]
+   [com.spotify.docker.client.exceptions DockerException]))
 
 (def stdout-tokens
   #{">" "STDOUT"    ; special internal path to capture stdout/stderr
@@ -42,20 +26,11 @@
      (catch java.io.IOException e
        (log/exception! e "couldn't delete local" path)))))
 
-(defn write-lines!
-  "Write a sequence of lines to a file, adding a newline to each line. Like
-  `spit`, this opens f via io/writer, writes the lines, then closes f.
-  See clojure.java.io/writer for the possibilities for f. Options docs?"
-  [f lines & options]
-  (with-open [^java.io.Writer w (apply io/writer f options)]
-    (doseq [line lines]
-      (.write w ^String (str line "\n")))))
-
 (defn find-local!
   "Make the named input or output file or directory so mounting it in
   Docker will work right, e.g. it won't assume it's going to be a directory."
   [root [remote internal]]
-  (let [[bucket key] (split-key remote)
+  (let [[bucket key] (base/split-key remote)
         input (io/file root key)
         local (.getAbsolutePath input)
         archive (str local ".tar.gz")
@@ -185,21 +160,6 @@
        kafka task "step-error"
        {:log log}))))
 
-(defn make-timer
-  "Make a `future` as a timer that waits then calls `f`. Cancelling it can stop
-  the timer but won't interrupt `f` midway (which could be bad for docker/stop!
-  or apoptosis) since it runs `f` in an independent thread."
-  [milliseconds f]
-  (future
-    (Thread/sleep milliseconds)
-    (future (f))))
-
-(defn cancel-timer
-  "Cancel a timer if possible. nil safe. Return true if this cancelled it."
-  [timer]
-  (and timer (future-cancel timer)))
-
-
 ; [FSM] The task :status normally goes through:
 ;   :starting   # pulling the docker image & input files and starting a container
 ;   :running    # running the task's command process in the container
@@ -271,7 +231,7 @@
 (defn- task-timeout-timer
   "Start a task-timeout timer for the given docker-id."
   [milliseconds sisy-state task-id]
-  (make-timer milliseconds #(terminate-by-timeout! sisy-state task-id)))
+  (base/make-timer milliseconds #(terminate-by-timeout! sisy-state task-id)))
 
 (defn- running-state
   "Transition :starting to :running or :terminate-when-ready to termination."
@@ -307,7 +267,7 @@
           (swap! state update :status #(if (= % :running) :finished %))))
 
       (let [end-nanos (System/nanoTime)
-            _ (cancel-timer timer)
+            _ (base/cancel-timer timer)
             elapsed-duration (Duration/ofNanos (- end-nanos start-nanos))
             timeout-duration (Duration/ofMillis timeout-millis)]
         [elapsed-duration timeout-duration]))))
@@ -369,12 +329,12 @@
                                 ; (zero? (count error-string))  ; use this?
                                 (not oom-killed?))
                   message (str (if success? "Success: " "Failure: ")
-                               "Process " (full-name status)  ; completion type
+                               "Process " (base/full-name status)  ; completion type
                                ", exit code " code (if (= code 137) " (SIGKILL)" "")
                                ", error string “" error-string "”"
                                (if oom-killed? " out-of-memory error" "")
-                               ", elapsed " (format-duration elapsed-duration)
-                               " of timeout parameter " (format-duration timeout-duration))]
+                               ", elapsed " (base/format-duration elapsed-duration)
+                               " of timeout parameter " (base/format-duration timeout-duration))]
               (log/log! (if success? log/info log/error) message)
               (status! kafka task "container-exit" {:docker-id id :code code})
 
@@ -385,7 +345,7 @@
                     (let [prologue (if (:log-out? output) [task "" h-rule] [])
                           epilogue (if (:log-out? output) [h-rule "" message] [])
                           all-lines (concat prologue @lines epilogue)]
-                      (write-lines! (:local output) all-lines)))
+                      (base/write-lines! (:local output) all-lines)))
 
                   (push-output! storage output)
 

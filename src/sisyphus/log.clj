@@ -5,6 +5,7 @@
     [clj-http.client :as http])
   (:import
     [java.io PrintWriter StringWriter]
+    [java.net UnknownHostException]
     [java.util Collections]
     [com.google.cloud MonitoredResource MonitoredResource$Builder]
     [com.google.cloud.logging LogEntry LogEntry$Builder Logging LoggingOptions
@@ -30,8 +31,8 @@
        (str "http://metadata.google.internal/computeMetadata/v1/instance/" fieldname)
        {:headers
         {:metadata-flavor "Google"}}))
-    (catch Exception e
-      (println "not on gce or" fieldname "is not a metadata field"))))
+    (catch UnknownHostException e
+      (println "not on GCE or" fieldname "is not a metadata field"))))
 
 (def gce-instance-name
   (or (gce-metadata "name") "local"))

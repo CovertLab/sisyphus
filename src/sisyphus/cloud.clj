@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as string]
    [clojure.java.io :as io]
+   [sisyphus.base :as base]
    [sisyphus.log :as log])
   (:import
    [java.io File FileInputStream]
@@ -62,15 +63,9 @@
     (.substring path 0 (dec (.length path)))
     path))
 
-(defn split-key
-  [key]
-  (let [colon (.indexOf key ":")]
-    [(.substring key 0 colon)
-     (.substring key (inc colon))]))
-
 (defn key-path
   [key]
-  (let [[bucket path] (split-key key)
+  (let [[bucket path] (base/split-key key)
         parts (string/split path #"/+")]
     (cons bucket parts)))
 
@@ -113,7 +108,7 @@
 (defn partition-keys
   "Partition bucket:key path strings into existing and not existing paths."
   [{:keys [^Storage storage]} data]
-  (let [bids (map (comp blob-id split-key) data)
+  (let [bids (map (comp blob-id base/split-key) data)
         existence (.get storage bids)]
     (reduce
      (fn [[exist non] [key blob]]
