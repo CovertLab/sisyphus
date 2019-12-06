@@ -32,6 +32,7 @@
            {:throw-exceptions false
             :headers
             {:metadata-flavor "Google"}})]
+      ;; returns status 404 if the metadata field is not set
       (if (= 200 (:status response))
         (:body response)))
     ;; nil communicates failure and lets the caller find the value another way.
