@@ -301,6 +301,8 @@
 
         (doseq [input inputs]
           (pull-input! storage input))
+        (if (seq inputs)
+          (log/debug! "finished pulling inputs")) ; hypothesis testing
 
         (let [mounted (concat inputs (remove :stdout? outputs))
               mounts (mount-map mounted :local :internal)
@@ -313,7 +315,6 @@
           (swap! state assoc :docker-id id)
 
           (try
-            (log/info! "created container" id config)
             (status! kafka task "container-create" {:docker-id id :docker-config config})
             (status! kafka task "execution-start" {:docker-id id})
 

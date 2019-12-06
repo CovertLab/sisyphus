@@ -5,7 +5,7 @@
    [sisyphus.base :as base]
    [sisyphus.log :as log])
   (:import
-   [java.io File FileInputStream]
+   [java.io File FileInputStream IOException]
    [java.util Arrays]
    [com.google.api.client.googleapis.auth.oauth2 GoogleCredential]
    [com.google.api.client.googleapis.javanet GoogleNetHttpTransport]
@@ -244,7 +244,8 @@
         blob ^Blob (.get storage bid options)]
     (if blob
       (download-blob! blob path)
-      (log/error! "file unavailable to download" (str bucket ":" key)))))
+      (throw (IOException. (str "file is unavailable to download: "
+                                bucket ":" key))))))
 
 (defn list-prefix
   "List cloud storage contents in a bucket with the given prefix string (which

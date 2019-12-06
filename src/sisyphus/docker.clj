@@ -106,22 +106,27 @@
       (:value res))))
 
 (defn pull!
-  "Pull the docker image given by the `image` argument."
+  "Pull the docker image given by the `image` argument. Throw a DockerException
+  after a few retries if it keeps failing."
   [^DockerClient docker image]
   (log/info! "docker pull" image)
-  (docker-retry 3 (fn [] (docker/pull docker image))))
+  (docker-retry 3 (fn [] (docker/pull docker image)))
+  (log/debug! "pulled docker image" image)) ; hypothesis testing
 
 (def default-options
-  {:image "alpine"
-   :command ["tail" "-f" "/dev/null"]})
+  {:image "alpine" ; BEWARE: alpine has its own libc which gets the math wrong
+   :command ["date"]})
 
 (defn create!
   "Create a docker container from the given options and return the container id."
   ([^DockerClient docker] (create! docker {}))
   ([^DockerClient docker options]
+   (log/debug! "creating docker container" options) ; hypothesis testing
    (let [config (build-config (merge default-options options))
-         create (.createContainer docker config)]
-     (docker-utils/format-id (.id create)))))
+         create (.createContainer docker config)
+         id (docker-utils/format-id (.id create))]
+     (log/info! "created docker container" id options)
+     id)))
 
 (defn logs-streams
   []
