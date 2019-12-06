@@ -26,13 +26,17 @@
   "Retrieve a GCE instance metadata field."
   [fieldname]
   (try
-    (:body
-      (http/get
-       (str "http://metadata.google.internal/computeMetadata/v1/instance/" fieldname)
-       {:headers
-        {:metadata-flavor "Google"}}))
-    (catch UnknownHostException e
-      (println "not on GCE or" fieldname "is not a metadata field"))))
+    (let [response
+          (http/get
+           (str "http://metadata.google.internal/computeMetadata/v1/instance/" fieldname)
+           {:throw-exceptions false
+            :headers
+            {:metadata-flavor "Google"}})]
+      (if (= 200 (:status response))
+        (:body response)))
+    ;; nil communicates failure and lets the caller find the value another way.
+    ;; We want to return nil in all cases except where the metadata field is set and accessible.
+    (catch UnknownHostException e nil)))
 
 (def gce-instance-name
   (or (gce-metadata "name") "local"))
