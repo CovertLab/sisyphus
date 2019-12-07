@@ -1,9 +1,11 @@
 (ns sisyphus.log
   (:require
     [clojure.string :as string]
+    [clojure.java.shell :as shell]
     [clj-http.client :as http])
   (:import
     [java.io PrintWriter StringWriter]
+    [java.net UnknownHostException]
     [java.util Collections]
     [com.google.cloud MonitoredResource MonitoredResource$Builder]
     [com.google.cloud.logging LogEntry LogEntry$Builder Logging LoggingOptions
@@ -11,22 +13,37 @@
 
 (def log-truncation 50000)
 
+(defn hostname
+  []
+  (.getHostName (java.net.InetAddress/getLocalHost)))
+
+(defn shell-out
+  [& tokens]
+  "Shell out for a single line of text."
+  (.trim (:out (apply shell/sh tokens))))
+
 (defn gce-metadata
   "Retrieve a GCE instance metadata field."
-  [fieldname default]
+  [fieldname]
   (try
-    (:body
-      (http/get
-       (str "http://metadata.google.internal/computeMetadata/v1/instance/" fieldname)
-       {:headers
-        {:metadata-flavor "Google"}}))
-    (catch Exception e default)))
+    (let [response
+          (http/get
+           (str "http://metadata.google.internal/computeMetadata/v1/instance/" fieldname)
+           {:throw-exceptions false
+            :headers
+            {:metadata-flavor "Google"}})]
+      ;; returns status 404 if the metadata field is not set
+      (if (= 200 (:status response))
+        (:body response)))
+    ;; nil communicates failure and lets the caller find the value another way.
+    ;; We want to return nil in all cases except where the metadata field is set and accessible.
+    (catch UnknownHostException e nil)))
 
 (def gce-instance-name
-  (gce-metadata "name" "local"))
+  (or (gce-metadata "name") "local"))
 
 (def gce-zone
-  (last (string/split (gce-metadata "zone" "not-on-GCE") #"/")))
+  (last (string/split (or (gce-metadata "zone") "not-on-GCE") #"/")))
 
 (def enable-gloud-logging?
   (not= gce-zone "not-on-GCE"))

@@ -122,6 +122,14 @@
   (let [message (json/parse-string raw true)]
     (log/info! "rabbit message received:" message)))
 
+(defn rabbit-metadata
+  ([] (rabbit-metadata nil))
+  ([workflow]
+   (let [workflow (or workflow (log/gce-metadata "attributes/workflow") "sisyphus")]
+     {:exchange (str workflow "-exchange")
+      :queue (str workflow "-queue")
+      :routing-key (str workflow "-task")})))
+
 (def parse-options
   [["-q" "--queue QUEUE" "queue to subscribe to"
     :default "sisyphus-queue"]

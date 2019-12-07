@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as string]
    [clojure.java.io :as io]
+   [sisyphus.base :as base]
    [sisyphus.log :as log])
   (:import
    [java.io File FileInputStream IOException]
@@ -62,15 +63,9 @@
     (.substring path 0 (dec (.length path)))
     path))
 
-(defn split-key
-  [key]
-  (let [colon (.indexOf key ":")]
-    [(.substring key 0 colon)
-     (.substring key (inc colon))]))
-
 (defn key-path
   [key]
-  (let [[bucket path] (split-key key)
+  (let [[bucket path] (base/split-key key)
         parts (string/split path #"/+")]
     (cons bucket parts)))
 
@@ -113,7 +108,7 @@
 (defn partition-keys
   "Partition bucket:key path strings into existing and not existing paths."
   [{:keys [^Storage storage]} data]
-  (let [bids (map (comp blob-id split-key) data)
+  (let [bids (map (comp blob-id base/split-key) data)
         existence (.get storage bids)]
     (reduce
      (fn [[exist non] [key blob]]
@@ -235,7 +230,8 @@
     (if directory?
       (.mkdirs file)
       (try
-        (.mkdirs base)
+        (when base
+          (.mkdirs base))
         (.downloadTo blob (.toPath file))
         (catch StorageException e
           (log/exception! e "failed to download" remote-path "to" path))))))
@@ -279,19 +275,33 @@
             local-path (join-path [path relative-path])]
         (download-blob! blob local-path)))))
 
+(defn project-zone
+  []
+  (let [zone (log/shell-out "gcloud" "config" "get-value" "compute/zone")
+        zone (if (= zone "")
+               log/gce-zone
+               zone)]
+    {:project (log/shell-out "gcloud" "config" "get-value" "core/project")
+     :zone zone}))
+
 (defn create-compute-service
   "Create an instance of com.google.api.services.compute.Compute to make requests with."
-  []
-  (let [transport (GoogleNetHttpTransport/newTrustedTransport)
-        factory (JacksonFactory/getDefaultInstance)
-        auth (into-array ["https://www.googleapis.com/auth/cloud-platform"])
-        credential (GoogleCredential/getApplicationDefault)
-        credential (if (.createScopedRequired credential)
-                     (.createScoped credential (Arrays/asList auth))
-                     credential)
-        builder (Compute$Builder. transport factory credential)]
-    (.setApplicationName builder "Gaia/0.0.1")
-    ^Compute (.build builder)))
+  ([]
+   (let [{:keys [project zone]} (project-zone)]
+     (create-compute-service project zone)))
+  ([project zone]
+   (let [transport (GoogleNetHttpTransport/newTrustedTransport)
+         factory (JacksonFactory/getDefaultInstance)
+         auth (into-array ["https://www.googleapis.com/auth/cloud-platform"])
+         credential (GoogleCredential/getApplicationDefault)
+         credential (if (.createScopedRequired credential)
+                      (.createScoped credential (Arrays/asList auth))
+                      credential)
+         builder (Compute$Builder. transport factory credential)]
+     (.setApplicationName builder "Gaia/0.0.1")
+     {:service ^Compute (.build builder)
+      :project project
+      :zone zone})))
 
 (defn render-filter
   "Render a map of options into the weird format that the compute instances api expects"
@@ -310,9 +320,9 @@
   "Given a compute service instance, project and zone for instances, return information on those
   instances. Also accepts an optional `options` arg that could contain the following keys:
       * :filter - a map of keys to values to filter the list of instances."
-  ([^Compute service project zone]
-   (list-instances service project zone {}))
-  ([^Compute service project zone options]
+  ([compute]
+   (list-instances compute {}))
+  ([{:keys [^Compute service project zone]} options]
    (let [request (.list (.instances service) project zone)]
      (if-let [instance-filter (:filter options)]
        (.setFilter request (render-filter instance-filter)))

@@ -3,8 +3,10 @@
    [clojure.edn :as edn]
    [clojure.string :as string]
    [clojure.java.shell :as sh]
+   [clojure.tools.cli :as cli]
    [cheshire.core :as json]
    [langohr.basic :as langohr]
+   [sisyphus.base :as base]
    [sisyphus.archive :as archive]
    [sisyphus.kafka :as kafka]
    [sisyphus.log :as log]
@@ -46,24 +48,24 @@
 (defn sisyphus-handle-kafka
   "Handle an incoming request via kafka to terminate a task."
   [state topic message]
-  (let [id (:id message)]
-    (try
+  (try
+    (let [id (:id message)]
       (when (terminate? message)
-        (task/terminate-by-request! state id))
-      (catch Exception e
-        (log/exception! e "STEP TERMINATION FAILED" id)))))
+        (task/terminate-by-request! state id)))
+    (catch Exception e
+      (log/exception! e "HANDLE KAFKA FAILED" message))))
 
 (defn apoptosis-timer
   "Start a timer to self-destruct this server if it remains idle."
   [delay]
-  (task/make-timer delay apoptosis))
+  (base/make-timer delay apoptosis))
 
 (defn- run-state!
   "Return the state-map for starting to run a task."
   ; NOTE: The doc for swap! says "f may be called multiple times, and thus
   ; should be free of side effects." Is an idempotent function OK?
   [state-map task]
-  (task/cancel-timer (:timer state-map))
+  (base/cancel-timer (:timer state-map))
   (assoc
    state-map
    :task task
@@ -75,7 +77,7 @@
   ; NOTE: The doc for swap! says "f may be called multiple times, and thus
   ; should be free of side effects." Is an idempotent function OK?
   [state-map config]
-  (task/cancel-timer (:timer state-map))
+  (base/cancel-timer (:timer state-map))
   (assoc
    state-map
    :task {}
@@ -134,10 +136,25 @@
     (update state :kafka merge consumer)))
 
 (defn start!
-  "Start the system by making all the required connections and returning the state map."
+  "Start the system by making all the required connections and returning the state map.
+   The priority of values for rabbit config are
+     1. command line options
+     2. gce metadata fields
+     3. values from file resources/config/sisyphus.clj
+     4. defaults from ns rabbit/default-config"
   [config]
-  (let [state (connect! config)]
-    (rabbit/start-consumer! (:rabbit state) (partial sisyphus-handle-rabbit state))
+  (let [metadata (rabbit/rabbit-metadata)
+        rabbit-config
+        (merge
+         rabbit/default-config
+         (:rabbit config)
+         metadata
+         (:options config))
+        config (assoc config :rabbit rabbit-config)
+        state (connect! config)]
+    (rabbit/start-consumer!
+     (:rabbit state)
+     (partial sisyphus-handle-rabbit state))
     state))
 
 (defn make-config
@@ -160,7 +177,9 @@
   [& args]
   (try
     (log/info! "sisyphus worker rises:" log/gce-instance-name)
-    (let [path "resources/config/sisyphus.clj"
+    (let [options (:options (cli/parse-opts args rabbit/parse-options))
+          path "resources/config/sisyphus.clj"
           config (read-path path)
+          config (assoc config :options options)
           state (start! config)]
       @(promise))))
