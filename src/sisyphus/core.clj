@@ -149,9 +149,10 @@
          rabbit/default-config
          (:rabbit config)
          metadata
-         (:options config))
+         (:args config))
         config (assoc config :rabbit rabbit-config)
         state (connect! config)]
+    (log/debug! "rabbit config:" rabbit-config)
     (rabbit/start-consumer!
      (:rabbit state)
      (partial sisyphus-handle-rabbit state))
@@ -173,13 +174,19 @@
   (edn/read-string
    (slurp path)))
 
+(def parse-options
+  [["-w" "--workflow WORKFLOW" "which workflow this worker is assigned to"]])
+
 (defn -main
   [& args]
   (try
     (log/info! "sisyphus worker rises:" log/gce-instance-name)
-    (let [options (:options (cli/parse-opts args rabbit/parse-options))
+    (let [options (:options (cli/parse-opts args parse-options))
+          rabbit-options
+          (when-let [workflow (:workflow options)]
+            (rabbit/rabbit-metadata workflow))
           path "resources/config/sisyphus.clj"
           config (read-path path)
-          config (assoc config :options options)
+          config (assoc config :args rabbit-options)
           state (start! config)]
       @(promise))))
