@@ -29,6 +29,11 @@
   (lcore/connect (select-keys config connection-keys)))
 
 (defn declare-queue!
+  "Declare a queue with the given `queue-name` is bound to the given `routing-key`.
+   Requires a rabbit state map as returned by `connect!`.
+
+   Messages published with a given routing key will be dropped from the exchange unless
+   that routing key is already bound to an existing queue."
   [{:keys [channel exchange]} queue-name routing-key]
   (let [queue
         (lqueue/declare
@@ -44,8 +49,8 @@
     queue))
 
 (defn connect-queue!
-  [connection config]
   "Create a new channel on the given connection."
+  [connection config]
   (let [config (merge default-config config)
         channel (lchannel/open connection)
         _ (lbasic/qos channel 1)
