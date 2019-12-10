@@ -28,6 +28,21 @@
   [config]
   (lcore/connect (select-keys config connection-keys)))
 
+(defn declare-queue!
+  [{:keys [channel exchange]} queue-name routing-key]
+  (let [queue
+        (lqueue/declare
+         channel queue-name
+         ; Critical: Not exclusive to one consumer, durable to survive a
+         ; broker restart, and don't auto-delete so it won't drop messages
+         ; when there are no consumers.
+         {:exclusive false
+          :durable true
+          :auto-delete false})]
+    (if-not (= exchange "")
+      (lqueue/bind channel queue-name exchange {:routing-key routing-key}))
+    queue))
+
 (defn connect-queue!
   [connection config]
   "Create a new channel on the given connection."
@@ -37,17 +52,8 @@
         queue-name (:queue config)
         exchange (:exchange config)
         _ (lexchange/declare channel exchange "direct")
-        queue (lqueue/declare
-               channel queue-name
-               ; Critical: Not exclusive to one consumer, durable to survive a
-               ; broker restart, and don't auto-delete so it won't drop messages
-               ; when there are no consumers.
-               {:exclusive false
-                :durable true
-                :auto-delete false})
-        routing-key (:routing-key config)]
-    (if-not (= exchange "")
-      (lqueue/bind channel queue-name exchange {:routing-key routing-key}))
+        routing-key (:routing-key config)
+        queue (declare-queue! {:channel channel :exchange exchange} queue-name routing-key)]
     {:queue queue
      :queue-name queue-name
      :exchange exchange
