@@ -28,26 +28,37 @@
   [config]
   (lcore/connect (select-keys config connection-keys)))
 
+(defn declare-queue!
+  "Declare a queue with the given `queue-name` is bound to the given `routing-key`.
+   Requires a rabbit state map as returned by `connect!`.
+
+   Messages published with a given routing key will be dropped from the exchange unless
+   that routing key is already bound to an existing queue."
+  [{:keys [channel exchange]} queue-name routing-key]
+  (let [queue
+        (lqueue/declare
+         channel queue-name
+         ; Critical: Not exclusive to one consumer, durable to survive a
+         ; broker restart, and don't auto-delete so it won't drop messages
+         ; when there are no consumers.
+         {:exclusive false
+          :durable true
+          :auto-delete false})]
+    (if-not (= exchange "")
+      (lqueue/bind channel queue-name exchange {:routing-key routing-key}))
+    queue))
+
 (defn connect-queue!
-  [connection config]
   "Create a new channel on the given connection."
+  [connection config]
   (let [config (merge default-config config)
         channel (lchannel/open connection)
         _ (lbasic/qos channel 1)
         queue-name (:queue config)
         exchange (:exchange config)
         _ (lexchange/declare channel exchange "direct")
-        queue (lqueue/declare
-               channel queue-name
-               ; Critical: Not exclusive to one consumer, durable to survive a
-               ; broker restart, and don't auto-delete so it won't drop messages
-               ; when there are no consumers.
-               {:exclusive false
-                :durable true
-                :auto-delete false})
-        routing-key (:routing-key config)]
-    (if-not (= exchange "")
-      (lqueue/bind channel queue-name exchange {:routing-key routing-key}))
+        routing-key (:routing-key config)
+        queue (declare-queue! {:channel channel :exchange exchange} queue-name routing-key)]
     {:queue queue
      :queue-name queue-name
      :exchange exchange
